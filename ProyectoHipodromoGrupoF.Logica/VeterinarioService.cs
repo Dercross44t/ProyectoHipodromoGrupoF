@@ -35,14 +35,14 @@ namespace ProyectoHipodromoGrupoF.Logica
         public List<HistorialVeterinario> ListarHistorialPorCaballo(string codigoCaballo) =>
             _veterinarioRepository.ListarHistorialPorCaballo(codigoCaballo);
 
-        public void InsertarHistorial(HistorialVeterinario historial) =>
-            _veterinarioRepository.InsertarHistorial(historial);
+        public void InsertarHistorial(HistorialVeterinario historial, string usuarioActual) =>
+            _veterinarioRepository.InsertarHistorial(historial, usuarioActual);
 
-        public void ActualizarHistorial(HistorialVeterinario historial) =>
-            _veterinarioRepository.ActualizarHistorial(historial);
+        public void ActualizarHistorial(HistorialVeterinario historial, string usuarioActual) =>
+            _veterinarioRepository.ActualizarHistorial(historial, usuarioActual);
 
-        public void EliminarHistorial(string codigo) =>
-            _veterinarioRepository.EliminarHistorial(codigo);
+        public void EliminarHistorial(string codigo, string usuarioActual) =>
+            _veterinarioRepository.EliminarHistorial(codigo, usuarioActual);
 
         // ─── ALERTAS (2% rúbrica) ────────────────────────────────────────────────
 

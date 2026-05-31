@@ -5,6 +5,7 @@
     var encargados = ViewBag.Encargados as List<ProyectoHipodromoGrupoF.Modelo.EncargadoEstablo> ?? new();
 }
 
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <p class="text-secondary m-0">Administración de establos y su capacidad máxima.</p>
     @if(User.IsInRole("2") || User.IsInRole("3"))
@@ -16,17 +17,22 @@
 </div>
 
 <!-- Nav Tabs -->
-<ul class="nav nav-pills mb-4 border-bottom border-secondary pb-3">
-  <li class="nav-item">
-    <a class="nav-link text-secondary" asp-action="Index">Caballos Registrados</a>
-  </li>
-  <li class="nav-item">
-    <a class="nav-link active bg-transparent text-primary fw-bold" asp-action="Establos">Distribución de Establos</a>
-  </li>
-  <li class="nav-item">
-    <a class="nav-link text-secondary" asp-action="HistorialVeterinario">Historial Veterinario</a>
-  </li>
-</ul>
+<div class="d-flex gap-4 border-bottom border-secondary mb-4 pb-3">
+    <a class="@(ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "text-primary fw-bold" : "text-secondary") text-decoration-none"
+       asp-controller="Equinos" asp-action="Index">
+        Caballos Registrados
+    </a>
+
+    <a class="@(ViewContext.RouteData.Values["action"]?.ToString() == "Establos" ? "text-primary fw-bold" : "text-secondary") text-decoration-none"
+       asp-controller="Equinos" asp-action="Establos">
+        Distribución de Establos
+    </a>
+
+    <a class="@(ViewContext.RouteData.Values["action"]?.ToString() == "HistorialVeterinario" ? "text-primary fw-bold" : "text-secondary") text-decoration-none"
+       asp-controller="Equinos" asp-action="HistorialVeterinario">
+        Historial Veterinario
+    </a>
+</div>
 
 <div class="row">
     @foreach (var item in Model)

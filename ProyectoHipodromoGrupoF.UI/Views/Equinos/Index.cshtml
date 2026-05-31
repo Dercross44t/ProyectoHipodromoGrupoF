@@ -11,17 +11,32 @@
     var codigoPropio  = ViewBag.CodigoPropietarioActual?.ToString() ?? "";
 }
 
+<!-- Nav Tabs -->
+<div class="d-flex gap-4 border-bottom border-secondary mb-4 pb-3">
+    <a class="@(ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "text-primary fw-bold" : "text-secondary") text-decoration-none"
+       asp-controller="Equinos" asp-action="Index">
+        Caballos Registrados
+    </a>
+
+    <a class="@(ViewContext.RouteData.Values["action"]?.ToString() == "Establos" ? "text-primary fw-bold" : "text-secondary") text-decoration-none"
+       asp-controller="Equinos" asp-action="Establos">
+        Distribución de Establos
+    </a>
+
+    <a class="@(ViewContext.RouteData.Values["action"]?.ToString() == "HistorialVeterinario" ? "text-primary fw-bold" : "text-secondary") text-decoration-none"
+       asp-controller="Equinos" asp-action="HistorialVeterinario">
+        Historial Veterinario
+    </a>
+</div>
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <p class="text-secondary m-0">
         @if (esPropietario) { <text>Mis caballos registrados en el hipódromo.</text> }
         else { <text>Listado global de caballos registrados.</text> }
     </p>
-    @if (User.IsInRole("1") || User.IsInRole("2"))
-    {
-        <button class="btn btn-primary-custom" data-bs-toggle="modal" data-bs-target="#insertarCaballoModal" id="btnNuevoCaballo">
-            <i class="fa-solid fa-plus me-2"></i> Registrar Caballo
-        </button>
-    }
+    <button class="btn btn-primary-custom" onclick="validarPermisoRegistrarCaballo()" id="btnNuevoCaballo">
+        <i class="fa-solid fa-plus me-2"></i> Registrar Caballo
+    </button>
 </div>
 
 <!-- Tabla -->
@@ -392,5 +407,16 @@
         var el = document.getElementById(id);
         if (el) el.value = value;
     }
+            function validarPermisoRegistrarCaballo() {
+            const esPropietario = '@User.IsInRole("1")'.toLowerCase() === 'true';
+
+            if (!esPropietario) {
+                alert('No posee permisos para registrar caballos.');
+                return;
+            }
+
+            const modal = new bootstrap.Modal(document.getElementById('insertarCaballoModal'));
+            modal.show();
+        }
 </script>
 }

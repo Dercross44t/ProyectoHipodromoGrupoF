@@ -93,9 +93,6 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
             }
 
             return RedirectToAction("Index");
-            //try { _eventosService.EliminarEvento(codigo, usuarioActual); TempData["Exito"] = "Evento eliminado."; }
-            //catch (Exception ex) { TempData["Error"] = $"Error: {ex.Message}"; }
-            //return RedirectToAction("Index");
         }
 
         // ─── CARRERAS ─────────────────────────────────────────────────────────────

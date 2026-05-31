@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using ProyectoHipodromoGrupoF.Logica;
 using ProyectoHipodromoGrupoF.Modelo;
 using System;
+using System.Diagnostics;
 
 namespace ProyectoHipodromoGrupoF.UI.Controllers
 {
@@ -59,7 +60,7 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
         }
 
         [HttpPost][ValidateAntiForgeryToken]
-        [Authorize(Roles = "1,2")]
+        [Authorize(Roles = "1")]
         public IActionResult InsertarCaballo(Caballo caballo)
         {
             try
@@ -76,7 +77,7 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
         }
 
         [HttpPost][ValidateAntiForgeryToken]
-        [Authorize(Roles = "1,2")]
+        [Authorize(Roles = "1")]
         public IActionResult ActualizarCaballo(Caballo caballo)
         {
             try
@@ -162,7 +163,7 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
 
         // ─── HISTORIAL VETERINARIO ───────────────────────────────────────────────
 
-        [Authorize(Roles = "2,4")]
+        [Authorize(Roles = "4")]
         public IActionResult HistorialVeterinario()
         {
             ViewBag.Caballos      = _equinosService.ListarCaballos();
@@ -172,40 +173,74 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
         }
 
         [HttpPost][ValidateAntiForgeryToken]
-        [Authorize(Roles = "2,4")]
+        [Authorize(Roles = "4")]
         public IActionResult InsertarHistorial(HistorialVeterinario historial)
         {
             try
             {
-                // Mínimo 6 meses de vigencia
+                var usuarioActual = User.Identity?.Name ?? "usuario_desconocido";
+
                 if (historial.FechaVencimientoCertificacion < DateTime.Today.AddMonths(6))
                 {
-                    TempData["Error"] = "La fecha de vencimiento de la certificación debe ser mínimo 6 meses desde hoy.";
-                    return RedirectToAction("HistorialVeterinario");
+                   TempData["Error"] = "La fecha de vencimiento de la certificación debe ser mínimo 6 meses desde hoy.";
+                   return RedirectToAction("HistorialVeterinario");
                 }
-                _veterinarioService.InsertarHistorial(historial);
-                TempData["Exito"] = "Registro veterinario guardado correctamente.";
+
+                _veterinarioService.InsertarHistorial(historial, usuarioActual);
+                TempData["Exito"] = $"Historial registrado.";
             }
-            catch (Exception ex) { TempData["Error"] = $"Error: {ex.Message}"; }
-            return RedirectToAction("HistorialVeterinario");
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error: {ex.Message}";
+            }
+
+            return RedirectToAction("Index");
         }
 
         [HttpPost][ValidateAntiForgeryToken]
-        [Authorize(Roles = "2,4")]
+        [Authorize(Roles = "4")]
         public IActionResult ActualizarHistorial(HistorialVeterinario historial)
         {
-            try { _veterinarioService.ActualizarHistorial(historial); TempData["Exito"] = "Registro actualizado."; }
-            catch (Exception ex) { TempData["Error"] = $"Error: {ex.Message}"; }
-            return RedirectToAction("HistorialVeterinario");
+            try
+            {
+                var usuarioActual = User.Identity?.Name ?? "usuario_desconocido";
+
+                _veterinarioService.ActualizarHistorial(historial, usuarioActual);
+
+                TempData["Exito"] = $"Registro actualizado.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error: {ex.Message}";
+            }
+
+            return RedirectToAction("Index");
         }
 
         [HttpPost][ValidateAntiForgeryToken]
         [Authorize(Roles = "4")]
         public IActionResult EliminarHistorial(string codigo)
         {
-            try { _veterinarioService.EliminarHistorial(codigo); TempData["Exito"] = "Registro eliminado."; }
-            catch (Exception ex) { TempData["Error"] = $"Error: {ex.Message}"; }
-            return RedirectToAction("HistorialVeterinario");
+                try
+                {
+                    if (string.IsNullOrWhiteSpace(codigo))
+                    {
+                        TempData["Error"] = "Debe seleccionar un historial para eliminar.";
+                        return RedirectToAction("Index");
+                    }
+
+                    var usuarioActual = User.Identity?.Name ?? "usuario_desconocido";
+
+                    _veterinarioService.EliminarHistorial(codigo, usuarioActual);
+
+                    TempData["Exito"] = "Evento eliminado.";
+                }
+                catch (Exception ex)
+                {
+                    TempData["Error"] = $"Error: {ex.Message}";
+                }
+
+                return RedirectToAction("Index");
         }
 
         // ─── AJAX: verificar certificación ────────────────────────────────────────

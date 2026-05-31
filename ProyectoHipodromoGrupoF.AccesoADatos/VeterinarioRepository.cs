@@ -103,11 +103,16 @@ namespace ProyectoHipodromoGrupoF.AccesoADatos
             return lista;
         }
 
-        public void InsertarHistorial(HistorialVeterinario historial)
+        public void InsertarHistorial(HistorialVeterinario historial, string usuarioActual)
         {
             using var conexion = _conexionDB.ObtenerConexion();
-            // insertar_historial_veterinario(codigo_caballo, codigo_veterinario,
-            //                               diagnostico, tratamiento, fecha_revision, fecha_vencimiento)
+
+            using var comandoUsuario = new NpgsqlCommand(
+                "CALL public.establecer_usuario_actual($1)", conexion);
+
+            comandoUsuario.Parameters.AddWithValue(usuarioActual ?? "usuario_desconocido");
+            comandoUsuario.ExecuteNonQuery();
+
             using var comando = new NpgsqlCommand(
                 "CALL public.insertar_historial_veterinario($1,$2,$3,$4,$5,$6)", conexion);
             comando.Parameters.AddWithValue(historial.CodigoCaballo);
@@ -119,11 +124,16 @@ namespace ProyectoHipodromoGrupoF.AccesoADatos
             comando.ExecuteNonQuery();
         }
 
-        public void ActualizarHistorial(HistorialVeterinario historial)
+        public void ActualizarHistorial(HistorialVeterinario historial, string usuarioActual)
         {
             using var conexion = _conexionDB.ObtenerConexion();
-            // actualizar_historial_veterinario(codigo, codigo_caballo, codigo_veterinario,
-            //                                 diagnostico, tratamiento, fecha_revision, fecha_vencimiento)
+
+            using var comandoUsuario = new NpgsqlCommand(
+                "CALL public.establecer_usuario_actual($1)", conexion);
+
+            comandoUsuario.Parameters.AddWithValue(usuarioActual ?? "usuario_desconocido");
+            comandoUsuario.ExecuteNonQuery();
+
             using var comando = new NpgsqlCommand(
                 "CALL public.actualizar_historial_veterinario($1,$2,$3,$4,$5,$6,$7)", conexion);
             comando.Parameters.AddWithValue(historial.Codigo);
@@ -136,19 +146,21 @@ namespace ProyectoHipodromoGrupoF.AccesoADatos
             comando.ExecuteNonQuery();
         }
 
-        public void EliminarHistorial(string codigo)
+        public void EliminarHistorial(string codigo, string usuarioActual)
         {
             using var conexion = _conexionDB.ObtenerConexion();
+
+            using var comandoUsuario = new NpgsqlCommand(
+                "CALL public.establecer_usuario_actual($1)", conexion);
+
+            comandoUsuario.Parameters.AddWithValue(usuarioActual ?? "usuario_desconocido");
+            comandoUsuario.ExecuteNonQuery();
+
             using var comando = new NpgsqlCommand(
                 "CALL public.eliminar_historial_veterinario($1)", conexion);
             comando.Parameters.AddWithValue(codigo);
             comando.ExecuteNonQuery();
         }
-
-        /// <summary>
-        /// Retorna caballos con certificación vencida o próxima a vencer (30 días).
-        /// Se usa para las alertas del dashboard y el badge del menú.
-        /// </summary>
         public List<AlertaVeterinaria> ObtenerAlertasCertificacion()
         {
             var alertas = new List<AlertaVeterinaria>();
