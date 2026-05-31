@@ -39,7 +39,7 @@ namespace ProyectoHipodromoGrupoF.Logica
         /// 4. Reinicia el flag de descuento si fue usado.
         /// 5. Evalúa si el propietario supera ₡500k en 6 meses para activar próximo descuento.
         /// </summary>
-        public void InsertarFactura(Factura factura)
+        public void InsertarFactura(Factura factura, string usuarioActual)
         {
             var propietario = _personasRepository.ObtenerPropietario(factura.CodigoPropietario);
             if (propietario != null && propietario.DescuentoProximaFacturacion)
@@ -52,7 +52,7 @@ namespace ProyectoHipodromoGrupoF.Logica
             factura.Total     = Math.Round(montoNeto + factura.Impuestos, 2);
             factura.IdCatEstadoPago = 2; // Pendiente
 
-            _facturacionRepository.InsertarFactura(factura);
+            _facturacionRepository.InsertarFactura(factura, usuarioActual);
 
             if (propietario != null && propietario.DescuentoProximaFacturacion)
                 _personasRepository.ReiniciarDescuento(factura.CodigoPropietario);
@@ -62,11 +62,11 @@ namespace ProyectoHipodromoGrupoF.Logica
                     factura.CodigoPropietario, propietario.Cedula);
         }
 
-        public void ActualizarFactura(Factura factura) =>
-            _facturacionRepository.ActualizarFactura(factura);
+        public void ActualizarFactura(Factura factura, string usuarioActual) =>
+            _facturacionRepository.ActualizarFactura(factura, usuarioActual);
 
-        public void EliminarFactura(string codigo) =>
-            _facturacionRepository.EliminarFactura(codigo);
+        public void EliminarFactura(string codigo, string usuarioActual) =>
+            _facturacionRepository.EliminarFactura(codigo, usuarioActual);
 
         // ─── TRANSACCIONES ────────────────────────────────────────────────────────
 

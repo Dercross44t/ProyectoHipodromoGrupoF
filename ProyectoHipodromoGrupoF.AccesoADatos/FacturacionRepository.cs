@@ -45,11 +45,16 @@ namespace ProyectoHipodromoGrupoF.AccesoADatos
             return facturas;
         }
 
-        public void InsertarFactura(Factura factura)
+        public void InsertarFactura(Factura factura, string usuarioActual)
         {
             using var conexion = _conexionDB.ObtenerConexion();
-            // insertar_factura(codigo_propietario, codigo_evento,
-            //                  subtotal, descuento, impuestos, total, id_cat_estado_pago)
+
+            using var comandoUsuario = new NpgsqlCommand(
+                "CALL public.establecer_usuario_actual($1)", conexion);
+
+            comandoUsuario.Parameters.AddWithValue(usuarioActual ?? "usuario_desconocido");
+            comandoUsuario.ExecuteNonQuery();
+
             using var comando = new NpgsqlCommand(
                 "CALL public.insertar_factura($1,$2,$3,$4,$5,$6,$7)", conexion);
             comando.Parameters.AddWithValue(factura.CodigoPropietario);
@@ -63,11 +68,16 @@ namespace ProyectoHipodromoGrupoF.AccesoADatos
             comando.ExecuteNonQuery();
         }
 
-        public void ActualizarFactura(Factura factura)
+        public void ActualizarFactura(Factura factura, string usuarioActual)
         {
             using var conexion = _conexionDB.ObtenerConexion();
-            // actualizar_factura(codigo, codigo_propietario, codigo_evento,
-            //                    subtotal, descuento, impuestos, total, id_cat_estado_pago)
+
+            using var comandoUsuario = new NpgsqlCommand(
+                "CALL public.establecer_usuario_actual($1)", conexion);
+
+            comandoUsuario.Parameters.AddWithValue(usuarioActual ?? "usuario_desconocido");
+            comandoUsuario.ExecuteNonQuery();
+
             using var comando = new NpgsqlCommand(
                 "CALL public.actualizar_factura($1,$2,$3,$4,$5,$6,$7,$8)", conexion);
             comando.Parameters.AddWithValue(factura.Codigo);
@@ -82,9 +92,16 @@ namespace ProyectoHipodromoGrupoF.AccesoADatos
             comando.ExecuteNonQuery();
         }
 
-        public void EliminarFactura(string codigo)
+        public void EliminarFactura(string codigo, string usuarioActual)
         {
             using var conexion = _conexionDB.ObtenerConexion();
+
+            using var comandoUsuario = new NpgsqlCommand(
+                "CALL public.establecer_usuario_actual($1)", conexion);
+
+            comandoUsuario.Parameters.AddWithValue(usuarioActual ?? "usuario_desconocido");
+            comandoUsuario.ExecuteNonQuery();
+
             using var comando = new NpgsqlCommand("CALL public.eliminar_factura($1)", conexion);
             comando.Parameters.AddWithValue(codigo);
             comando.ExecuteNonQuery();

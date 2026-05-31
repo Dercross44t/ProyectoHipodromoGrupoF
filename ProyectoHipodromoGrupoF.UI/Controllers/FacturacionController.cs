@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using ProyectoHipodromoGrupoF.Logica;
 using ProyectoHipodromoGrupoF.Modelo;
 using System;
+using System.Diagnostics;
 
 namespace ProyectoHipodromoGrupoF.UI.Controllers
 {
@@ -49,16 +50,26 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
             return View("Index", _facturacionService.ListarFacturasPorPropietario(codigoPropietario));
         }
 
+
+        
+
         [HttpPost][ValidateAntiForgeryToken]
         [Authorize(Roles = "2")]
         public IActionResult InsertarFactura(Factura factura)
         {
             try
             {
-                _facturacionService.InsertarFactura(factura);
-                TempData["Exito"] = "Factura generada con IVA 13% aplicado.";
+                var usuarioActual = User.Identity?.Name ?? "usuario_desconocido";
+
+                _facturacionService.InsertarFactura(factura, usuarioActual);
+
+                TempData["Exito"] = $"Factura generada con IVA 13% aplicado.";
             }
-            catch (Exception ex) { TempData["Error"] = $"Error: {ex.Message}"; }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error: {ex.Message}";
+            }
+
             return RedirectToAction("Index");
         }
 
@@ -66,8 +77,19 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
         [Authorize(Roles = "2")]
         public IActionResult ActualizarFactura(Factura factura)
         {
-            try { _facturacionService.ActualizarFactura(factura); TempData["Exito"] = "Factura actualizada."; }
-            catch (Exception ex) { TempData["Error"] = $"Error: {ex.Message}"; }
+            try
+            {
+                var usuarioActual = User.Identity?.Name ?? "usuario_desconocido";
+
+                _facturacionService.ActualizarFactura(factura, usuarioActual);
+
+                TempData["Exito"] = $"Factura actualizada.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error: {ex.Message}";
+            }
+
             return RedirectToAction("Index");
         }
 
@@ -75,8 +97,25 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
         [Authorize(Roles = "2")]
         public IActionResult EliminarFactura(string codigo)
         {
-            try { _facturacionService.EliminarFactura(codigo); TempData["Exito"] = "Factura eliminada."; }
-            catch (Exception ex) { TempData["Error"] = $"Error: {ex.Message}"; }
+            try
+            {
+                if (string.IsNullOrWhiteSpace(codigo))
+                {
+                    TempData["Error"] = "Debe seleccionar una factura para eliminar.";
+                    return RedirectToAction("Index");
+                }
+
+                var usuarioActual = User.Identity?.Name ?? "usuario_desconocido";
+
+                _facturacionService.EliminarFactura(codigo, usuarioActual);
+
+                TempData["Exito"] = "Factura eliminada.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error: {ex.Message}";
+            }
+
             return RedirectToAction("Index");
         }
 
