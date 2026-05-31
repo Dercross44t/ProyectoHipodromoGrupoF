@@ -1,0 +1,115 @@
+@model IEnumerable<ProyectoHipodromoGrupoF.Modelo.HistorialTransaccion>
+@{
+    ViewData["Title"] = "Historial de Pagos";
+    var facturas    = ViewBag.Facturas    as List<ProyectoHipodromoGrupoF.Modelo.Factura>        ?? new();
+    var metodos     = ViewBag.MetodosPago as List<ProyectoHipodromoGrupoF.Modelo.CatalogoItem>   ?? new();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <p class="text-secondary m-0">Registro de pagos procesados asociados a facturas.</p>
+    <button class="btn btn-primary-custom" data-bs-toggle="modal" data-bs-target="#insertarTransaccionModal" id="btnNuevaTx">
+        <i class="fa-solid fa-plus me-2"></i> Registrar Pago
+    </button>
+</div>
+
+<!-- Tabs -->
+<ul class="nav nav-pills mb-4 border-bottom border-secondary pb-3">
+    <li class="nav-item"><a class="nav-link text-secondary" asp-action="Index">Facturas Emitidas</a></li>
+    <li class="nav-item"><a class="nav-link active bg-transparent text-primary fw-bold" asp-action="Transacciones">Historial de Pagos</a></li>
+</ul>
+
+<div class="glass-panel p-0 overflow-hidden">
+    <table class="table table-glass w-100 mb-0">
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Factura</th>
+                <th>Fecha de Pago</th>
+                <th>Monto</th>
+                <th>Método de Pago</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var t in Model)
+            {
+                <tr>
+                    <td><code class="text-accent">@t.Codigo</code></td>
+                    <td><a class="text-accent text-decoration-none"><i class="fa-solid fa-file-invoice me-1"></i>@t.CodigoFactura</a></td>
+                    <td>@t.Fecha.ToString("dd/MM/yyyy HH:mm")</td>
+                    <td class="fw-bold text-success">₡@t.Monto.ToString("N2")</td>
+                    <td>@(metodos.FirstOrDefault(m => m.Id == t.IdCatMetodoPago)?.Nombre ?? t.IdCatMetodoPago.ToString())</td>
+                </tr>
+            }
+            @if (!Model.Any())
+            {
+                <tr><td colspan="5" class="text-center text-secondary py-5">
+                    <i class="fa-solid fa-money-bill fa-2x mb-2 d-block opacity-25"></i>
+                    No hay transacciones registradas.
+                </td></tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- MODAL INSERTAR TRANSACCIÓN -->
+<div class="modal fade" id="insertarTransaccionModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content glass-card border-0">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title text-white"><i class="fa-solid fa-money-bill-wave me-2"></i>Registrar Pago</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form asp-action="InsertarTransaccion" method="post">
+        @Html.AntiForgeryToken()
+        <div class="modal-body">
+            <div class="mb-3">
+                <label class="form-label text-white">Factura *</label>
+                <select name="CodigoFactura" class="form-control form-control-glass" required id="selectFacturaTx"
+                        onchange="cargarTotalFactura(this.value)">
+                    <option value="">— Seleccione factura —</option>
+                    @foreach (var f in facturas) {
+                        <option value="@f.Codigo" data-total="@f.Total">
+                            @f.Codigo — ₡@f.Total.ToString("N2") (Prop: @f.CodigoPropietario)
+                        </option>
+                    }
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label text-white">Fecha de Pago *</label>
+                <input type="date" name="Fecha" class="form-control form-control-glass" required
+                       value="@DateTime.Today.ToString("yyyy-MM-dd")" id="inputFechaTx">
+            </div>
+            <div class="mb-3">
+                <label class="form-label text-white">Monto (₡) — auto-cargado de la factura</label>
+                <input type="number" name="Monto" id="inputMontoTx" class="form-control form-control-glass"
+                       required step="0.01" min="0.01" placeholder="Se carga al seleccionar factura" readonly>
+            </div>
+            <div class="mb-3">
+                <label class="form-label text-white">Método de Pago *</label>
+                <select name="IdCatMetodoPago" class="form-control form-control-glass" required id="selectMetodoPagoTx">
+                    <option value="">— Seleccione —</option>
+                    @foreach (var m in metodos) { <option value="@m.Id">@m.Nombre</option> }
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer border-secondary">
+            <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary-custom" id="btnGuardarTx">
+                <i class="fa-solid fa-floppy-disk me-1"></i> Registrar Pago
+            </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+    function cargarTotalFactura(codigoFactura) {
+        const sel  = document.getElementById('selectFacturaTx');
+        const opt  = sel.options[sel.selectedIndex];
+        const monto = opt?.dataset?.total ?? '';
+        document.getElementById('inputMontoTx').value = monto ? parseFloat(monto).toFixed(2) : '';
+    }
+</script>
+}

@@ -1,0 +1,131 @@
+@{
+    ViewData["Title"] = "Dashboard — Administrador";
+}
+
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="glass-card p-3 text-center">
+            <div style="font-size:2rem; color:#6366f1;"><i class="fa-solid fa-horse"></i></div>
+            <div class="fw-bold text-white fs-3 mt-1">@ViewBag.TotalCaballos</div>
+            <div class="text-secondary small">Caballos registrados</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="glass-card p-3 text-center">
+            <div style="font-size:2rem; color:#10b981;"><i class="fa-solid fa-flag-checkered"></i></div>
+            <div class="fw-bold text-white fs-3 mt-1">@ViewBag.EventosProgramados</div>
+            <div class="text-secondary small">Eventos programados</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="glass-card p-3 text-center">
+            <div style="font-size:2rem; color:#f59e0b;"><i class="fa-solid fa-clipboard-list"></i></div>
+            <div class="fw-bold text-white fs-3 mt-1">@ViewBag.InscripcionesPend</div>
+            <div class="text-secondary small">Inscripciones pendientes</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="glass-card p-3 text-center">
+            <div style="font-size:2rem; color:#ef4444;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <div class="fw-bold text-white fs-3 mt-1">@ViewBag.AlertasVet</div>
+            <div class="text-secondary small">Alertas veterinarias</div>
+        </div>
+    </div>
+</div>
+
+<!-- Finanzas KPI -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="glass-card p-3">
+            <div class="text-secondary small mb-1"><i class="fa-solid fa-circle-dollar-to-slot me-1"></i>Ingresos (Pagado)</div>
+            <div class="fw-bold text-success fs-5">₡@(((double)ViewBag.IngresosMes).ToString("N2"))</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="glass-card p-3">
+            <div class="text-secondary small mb-1"><i class="fa-solid fa-hourglass-half me-1"></i>Cuentas por cobrar</div>
+            <div class="fw-bold text-warning fs-5">₡@(((double)ViewBag.CuentasPorCobrar).ToString("N2"))</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="glass-card p-3">
+            <div class="text-secondary small mb-1"><i class="fa-solid fa-check-circle me-1 text-success"></i>Facturas pagadas</div>
+            <div class="fw-bold text-white fs-5">@ViewBag.FacturasPagadas</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="glass-card p-3">
+            <div class="text-secondary small mb-1"><i class="fa-solid fa-clock me-1 text-warning"></i>Facturas pendientes</div>
+            <div class="fw-bold text-white fs-5">@ViewBag.FacturasPendientes</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Panel Alertas Veterinarias -->
+    <div class="col-md-7">
+        <div class="glass-panel p-4 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="text-white m-0"><i class="fa-solid fa-stethoscope me-2 text-danger"></i>Alertas de Certificación Veterinaria</h5>
+                @if((int)ViewBag.AlertasVet > 0)
+                { <span class="badge bg-danger rounded-pill">@ViewBag.AlertasVet</span> }
+            </div>
+            @{
+                var alertas = ViewBag.AlertasDetalle as List<ProyectoHipodromoGrupoF.Modelo.AlertaVeterinaria> ?? new();
+            }
+            @if (alertas.Count == 0)
+            {
+                <div class="text-center text-secondary py-4">
+                    <i class="fa-solid fa-circle-check fa-2x text-success mb-2"></i><br>
+                    Todos los caballos tienen certificación vigente.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-glass w-100">
+                        <thead><tr><th>Caballo</th><th>Vence</th><th>Días restantes</th></tr></thead>
+                        <tbody>
+                            @foreach (var a in alertas)
+                            {
+                                var cls = a.DiasRestantes < 0 ? "text-danger" : a.DiasRestantes <= 15 ? "text-warning" : "text-info";
+                                <tr>
+                                    <td>@a.NombreCaballo <small class="text-secondary">(@a.CodigoCaballo)</small></td>
+                                    <td>
+                                        @if(a.FechaVencimientoCertificacion.Year == 1900) { <span class="text-secondary fst-italic">Sin cert.</span> }
+                                        else { @a.FechaVencimientoCertificacion.ToString("dd/MM/yyyy") }
+                                    </td>
+                                    <td class="@cls fw-bold">
+                                        @if(a.DiasRestantes == -999) { <text>Sin historial médico</text> }
+                                        else if(a.DiasRestantes < 0) { <text>VENCIDA (@(-a.DiasRestantes) días)</text> }
+                                        else { <text>@a.DiasRestantes días</text> }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Panel Acciones rápidas -->
+    <div class="col-md-5">
+        <div class="glass-panel p-4 mb-3">
+            <h5 class="text-white mb-3"><i class="fa-solid fa-star me-2 text-warning"></i>Propietarios Frecuentes</h5>
+            <p class="text-secondary small mb-3">
+                Evalúa todos los propietarios. Si alguno superó <strong class="text-white">₡500,000</strong>
+                facturados en los últimos 6 meses, activa automáticamente el descuento del 10%.
+            </p>
+            <form asp-controller="Home" asp-action="EjecutarEvaluarPropietarios" method="post">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-primary-custom w-100" id="btnEvaluarFrecuentes"
+                        onclick="setTimeout(() => { this.disabled=true; this.innerHTML='<i class=\'fa-solid fa-spinner fa-spin me-2\'></i>Evaluando...'; }, 10);">
+                    <i class="fa-solid fa-magnifying-glass-dollar me-2"></i>Evaluar Propietarios Frecuentes
+                </button>
+            </form>
+        </div>
+
+    </div>
+</div>

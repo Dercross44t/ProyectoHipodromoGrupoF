@@ -1,0 +1,397 @@
+@model IEnumerable<ProyectoHipodromoGrupoF.Modelo.Persona>
+@{
+    ViewData["Title"] = "Gestión de Personas";
+    var provincias     = ViewBag.Provincias    as List<ProyectoHipodromoGrupoF.Modelo.CatProvincia> ?? new();
+    var tiposTelefono  = ViewBag.TiposTelefono as List<ProyectoHipodromoGrupoF.Modelo.CatalogoItem> ?? new();
+    var tiposCorreo    = ViewBag.TiposCorreo   as List<ProyectoHipodromoGrupoF.Modelo.CatalogoItem> ?? new();
+}
+
+<!-- Nav Tabs -->
+<ul class="nav nav-pills mb-4 border-bottom border-secondary pb-3">
+  <li class="nav-item"><a class="nav-link text-secondary" asp-action="Index">Usuarios del Sistema</a></li>
+  <li class="nav-item"><a class="nav-link active bg-transparent text-primary fw-bold" asp-action="Personas">Personas</a></li>
+  <li class="nav-item"><a class="nav-link text-secondary" asp-action="Propietarios">Propietarios</a></li>
+  <li class="nav-item"><a class="nav-link text-secondary" asp-action="Veterinarios">Veterinarios</a></li>
+  <li class="nav-item"><a class="nav-link text-secondary" asp-action="Encargados">Encargados</a></li>
+</ul>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <p class="text-secondary m-0">Directorio base de personas físicas del sistema.</p>
+    <button class="btn btn-primary-custom" data-bs-toggle="modal" data-bs-target="#insertarPersonaModal" id="btnNuevaPersona">
+        <i class="fa-solid fa-user-plus me-2"></i> Registrar Persona
+    </button>
+</div>
+
+<div class="glass-panel p-0 overflow-hidden">
+    <table class="table table-glass w-100 mb-0">
+        <thead>
+            <tr><th>Cédula</th><th>Nombre Completo</th><th>Barrio (ID)</th><th class="text-end">Acciones</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var p in Model)
+            {
+                <tr>
+                    <td class="fw-bold">@p.Cedula</td>
+                    <td>@p.Nombre1 @p.Nombre2 @p.Apellido1 @p.Apellido2</td>
+                    <td class="text-secondary">@p.IdCatBarrio</td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-secondary border-0 me-1"
+                                onclick="abrirEditarPersona('@p.Cedula','@p.Nombre1','@p.Nombre2','@p.Apellido1','@p.Apellido2',@p.IdCatBarrio)"
+                                id="btnEditarPersona_@p.Cedula">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger border-0"
+                                onclick="confirmarEliminarPersona('@p.Cedula','@p.Nombre1 @p.Apellido1')"
+                                id="btnEliminarPersona_@p.Cedula">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            }
+            @if (!Model.Any())
+            {
+                <tr><td colspan="4" class="text-center text-secondary py-5">No hay personas registradas.</td></tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- MODAL INSERTAR PERSONA -->
+<div class="modal fade" id="insertarPersonaModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content glass-card border-0">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title text-white"><i class="fa-solid fa-user-plus me-2"></i>Registrar Persona</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form asp-action="InsertarPersona" method="post" id="formInsertarPersona">
+        @Html.AntiForgeryToken()
+        <div class="modal-body">
+            <div class="row g-3">
+                <!-- Datos personales -->
+                <div class="col-md-3">
+                    <label class="form-label text-white">Cédula * (9 dígitos)</label>
+                    <input type="text" name="Cedula" class="form-control form-control-glass" required
+                           pattern="[0-9]{9}" maxlength="9" placeholder="123456789" id="inputCedulaPersona">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label text-white">Primer Nombre *</label>
+                    <input type="text" name="Nombre1" class="form-control form-control-glass" required maxlength="50" id="inputNombre1">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label text-white">Segundo Nombre</label>
+                    <input type="text" name="Nombre2" class="form-control form-control-glass" maxlength="50" id="inputNombre2">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label text-white">Primer Apellido *</label>
+                    <input type="text" name="Apellido1" class="form-control form-control-glass" required maxlength="50" id="inputApellido1">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label text-white">Segundo Apellido *</label>
+                    <input type="text" name="Apellido2" class="form-control form-control-glass" required maxlength="50" id="inputApellido2">
+                </div>
+
+                <!-- Dirección cascada -->
+                <div class="col-md-3">
+                    <label class="form-label text-white">Provincia *</label>
+                    <select class="form-control form-control-glass" id="selectProvincia"
+                            onchange="cargarCantones(this.value,'selectCanton','selectDistrito','selectBarrio')">
+                        <option value="">— Seleccione —</option>
+                        @foreach (var pr in provincias) { <option value="@pr.Id">@pr.Nombre</option> }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label text-white">Cantón *</label>
+                    <select class="form-control form-control-glass" id="selectCanton" disabled
+                            onchange="cargarDistritos(this.value,'selectDistrito','selectBarrio')">
+                        <option value="">— Seleccione provincia —</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label text-white">Distrito *</label>
+                    <select class="form-control form-control-glass" id="selectDistrito" disabled
+                            onchange="cargarBarrios(this.value,'selectBarrio')">
+                        <option value="">— Seleccione cantón —</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label text-white">Barrio *</label>
+                    <select name="IdCatBarrio" class="form-control form-control-glass" id="selectBarrio" required disabled>
+                        <option value="">— Seleccione distrito —</option>
+                    </select>
+                </div>
+
+                <!-- Teléfonos dinámicos -->
+                <div class="col-12 mt-2">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label text-white m-0"><i class="fa-solid fa-phone me-2 text-secondary"></i>Teléfonos</label>
+                        <button type="button" class="btn btn-sm btn-secondary-custom" onclick="agregarTelefono()" id="btnAgregarTel">
+                            <i class="fa-solid fa-plus me-1"></i> Agregar
+                        </button>
+                    </div>
+                    <div id="telefonosContainer"></div>
+                </div>
+
+                <!-- Correos dinámicos -->
+                <div class="col-12 mt-2">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label text-white m-0"><i class="fa-solid fa-envelope me-2 text-secondary"></i>Correos Electrónicos</label>
+                        <button type="button" class="btn btn-sm btn-secondary-custom" onclick="agregarCorreo()" id="btnAgregarCorreo">
+                            <i class="fa-solid fa-plus me-1"></i> Agregar
+                        </button>
+                    </div>
+                    <div id="correosContainer"></div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer border-secondary">
+            <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary-custom" id="btnGuardarPersona">
+                <i class="fa-solid fa-floppy-disk me-1"></i> Registrar
+            </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR PERSONA -->
+<div class="modal fade" id="editarPersonaModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content glass-card border-0">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title text-white"><i class="fa-solid fa-pen me-2"></i>Editar Persona</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form asp-action="ActualizarPersona" method="post">
+        @Html.AntiForgeryToken()
+        <div class="modal-body">
+            <div class="mb-3">
+                <label class="form-label text-white">Seleccionar persona</label>
+                <select class="form-control form-control-glass" onchange="seleccionarPersonaEditar(this)">
+                    <option value="">— Seleccione —</option>
+                    @foreach (var p in Model) {
+                        <option value="@p.Cedula" data-n1="@p.Nombre1" data-n2="@p.Nombre2" data-a1="@p.Apellido1" data-a2="@p.Apellido2" data-barrio="@p.IdCatBarrio">
+                            @p.Cedula — @p.Nombre1 @p.Apellido1
+                        </option>
+                    }
+                </select>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label text-white">Cédula</label>
+                    <input type="text" name="Cedula" id="editPersonaCedula" class="form-control form-control-glass" readonly>
+                </div>
+                <div class="col-md-6"><label class="form-label text-white">Primer Nombre *</label>
+                    <input type="text" name="Nombre1" id="editPersonaN1" class="form-control form-control-glass" required maxlength="50"></div>
+                <div class="col-md-6"><label class="form-label text-white">Segundo Nombre</label>
+                    <input type="text" name="Nombre2" id="editPersonaN2" class="form-control form-control-glass" maxlength="50"></div>
+                <div class="col-md-6"><label class="form-label text-white">Primer Apellido *</label>
+                    <input type="text" name="Apellido1" id="editPersonaA1" class="form-control form-control-glass" required maxlength="50"></div>
+                <div class="col-md-6"><label class="form-label text-white">Segundo Apellido *</label>
+                    <input type="text" name="Apellido2" id="editPersonaA2" class="form-control form-control-glass" required maxlength="50"></div>
+                <div class="col-md-6">
+                    <label class="form-label text-white">Provincia</label>
+                    <select class="form-control form-control-glass" id="editProvPer" onchange="cargarCantones(this.value,'editCantonPer','editDistPer','editBarrioPer')">
+                        <option value="">— Seleccione —</option>
+                        @foreach (var pr in provincias) { <option value="@pr.Id">@pr.Nombre</option> }
+                    </select>
+                </div>
+                <div class="col-md-6"><label class="form-label text-white">Cantón</label>
+                    <select class="form-control form-control-glass" id="editCantonPer" disabled onchange="cargarDistritos(this.value,'editDistPer','editBarrioPer')">
+                        <option value="">— Seleccione provincia —</option></select></div>
+                <div class="col-md-6"><label class="form-label text-white">Distrito</label>
+                    <select class="form-control form-control-glass" id="editDistPer" disabled onchange="cargarBarrios(this.value,'editBarrioPer')">
+                        <option value="">— Seleccione cantón —</option></select></div>
+                <div class="col-md-6"><label class="form-label text-white">Barrio *</label>
+                    <select name="IdCatBarrio" class="form-control form-control-glass" id="editBarrioPer" required disabled>
+                        <option value="">— Seleccione distrito —</option></select></div>
+            </div>
+        </div>
+        <div class="modal-footer border-secondary">
+            <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary-custom">
+                <i class="fa-solid fa-floppy-disk me-1"></i> Actualizar
+            </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ELIMINAR PERSONA -->
+<div class="modal fade" id="eliminarPersonaModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content glass-card border-0">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title text-white text-danger"><i class="fa-solid fa-trash me-2"></i>Eliminar Persona</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+          <div class="mb-3">
+              <label class="form-label text-white">Seleccionar persona</label>
+              <select class="form-control form-control-glass" onchange="seleccionarPersonaEliminar(this)" id="selectElimPersona">
+                  <option value="">— Seleccione —</option>
+                  @foreach (var p in Model) { <option value="@p.Cedula" data-nombre="@p.Nombre1 @p.Apellido1">@p.Cedula — @p.Nombre1 @p.Apellido1</option> }
+              </select>
+          </div>
+          <div id="elimPersonaAlert" class="p-3 rounded" style="display:none; background:rgba(239,68,68,0.1); border-left:3px solid #ef4444;">
+              <p class="text-secondary mb-0">¿Confirmas eliminar a <strong class="text-white" id="elimPersonaNombre"></strong>?</p>
+          </div>
+      </div>
+      <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+          <form asp-action="EliminarPersona" method="post" style="display:inline;">
+              @Html.AntiForgeryToken()
+              <input type="hidden" name="cedula" id="elimPersonaCedula">
+              <button type="submit" class="btn btn-danger" id="btnConfElimPersona" disabled>
+                  <i class="fa-solid fa-trash me-1"></i> Eliminar
+              </button>
+          </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+    // ─── CASCADA GEOGRAFÍA ──────────────────────────────────────────────────────
+
+    async function cargarCantones(idProvincia, cantonId, distritoId, barrioId) {
+        const canton   = document.getElementById(cantonId);
+        const distrito = document.getElementById(distritoId);
+        const barrio   = document.getElementById(barrioId);
+        canton.disabled = true; distrito.disabled = true; barrio.disabled = true;
+        canton.innerHTML   = '<option value="">Cargando...</option>';
+        distrito.innerHTML = '<option value="">— Seleccione cantón —</option>';
+        barrio.innerHTML   = '<option value="">— Seleccione distrito —</option>';
+
+        if (!idProvincia) { canton.innerHTML = '<option value="">— Seleccione provincia —</option>'; return; }
+        const data = await fetch(`/Personas/GetCantones?idProvincia=${idProvincia}`).then(r => r.json());
+        canton.innerHTML = '<option value="">— Seleccione —</option>';
+        data.forEach(c => { canton.innerHTML += `<option value="${c.id}">${c.nombre}</option>`; });
+        canton.disabled = false;
+    }
+
+    async function cargarDistritos(idCanton, distritoId, barrioId) {
+        const distrito = document.getElementById(distritoId);
+        const barrio   = document.getElementById(barrioId);
+        distrito.disabled = true; barrio.disabled = true;
+        distrito.innerHTML = '<option value="">Cargando...</option>';
+        barrio.innerHTML   = '<option value="">— Seleccione distrito —</option>';
+
+        if (!idCanton) { distrito.innerHTML = '<option value="">— Seleccione cantón —</option>'; return; }
+        const data = await fetch(`/Personas/GetDistritos?idCanton=${idCanton}`).then(r => r.json());
+        distrito.innerHTML = '<option value="">— Seleccione —</option>';
+        data.forEach(d => { distrito.innerHTML += `<option value="${d.id}">${d.nombre}</option>`; });
+        distrito.disabled = false;
+    }
+
+    async function cargarBarrios(idDistrito, barrioId) {
+        const barrio = document.getElementById(barrioId);
+        barrio.disabled = true;
+        barrio.innerHTML = '<option value="">Cargando...</option>';
+
+        if (!idDistrito) { barrio.innerHTML = '<option value="">— Seleccione distrito —</option>'; return; }
+        const data = await fetch(`/Personas/GetBarrios?idDistrito=${idDistrito}`).then(r => r.json());
+        barrio.innerHTML = '<option value="">— Seleccione —</option>';
+        data.forEach(b => { barrio.innerHTML += `<option value="${b.id}">${b.nombre}</option>`; });
+        barrio.disabled = false;
+    }
+
+    // ─── TELÉFONOS DINÁMICOS ────────────────────────────────────────────────────
+
+    let telIdx = 0;
+    const tiposTel = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(tiposTelefono.Select(t => new { id = t.Id, nombre = t.Nombre })));
+
+    function agregarTelefono() {
+        const container = document.getElementById('telefonosContainer');
+        const div = document.createElement('div');
+        div.className = 'row g-2 mb-2 telefono-row align-items-center';
+        const opts = tiposTel.map(t => `<option value="${t.id}">${t.nombre}</option>`).join('');
+        div.innerHTML = `
+            <div class="col-5">
+                <input type="text" name="telefonos" class="form-control form-control-glass"
+                       placeholder="Número (8 dígitos)" pattern="[0-9]{8}" maxlength="8" required>
+            </div>
+            <div class="col-5">
+                <select name="tiposTelefono" class="form-control form-control-glass">${opts}</select>
+            </div>
+            <div class="col-2">
+                <button type="button" class="btn btn-sm btn-outline-danger border-0 w-100"
+                        onclick="this.closest('.telefono-row').remove()">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>`;
+        container.appendChild(div);
+        telIdx++;
+    }
+
+    // ─── CORREOS DINÁMICOS ──────────────────────────────────────────────────────
+
+    const tiposCorreo = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(tiposCorreo.Select(t => new { id = t.Id, nombre = t.Nombre })));
+
+    function agregarCorreo() {
+        const container = document.getElementById('correosContainer');
+        const div = document.createElement('div');
+        div.className = 'row g-2 mb-2 correo-row align-items-center';
+        const opts = tiposCorreo.map(t => `<option value="${t.id}">${t.nombre}</option>`).join('');
+        div.innerHTML = `
+            <div class="col-6">
+                <input type="email" name="correos" class="form-control form-control-glass"
+                       placeholder="ejemplo@correo.com" required>
+            </div>
+            <div class="col-4">
+                <select name="tiposCorreo" class="form-control form-control-glass">${opts}</select>
+            </div>
+            <div class="col-2">
+                <button type="button" class="btn btn-sm btn-outline-danger border-0 w-100"
+                        onclick="this.closest('.correo-row').remove()">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>`;
+        container.appendChild(div);
+    }
+
+    // ─── EDITAR / ELIMINAR PERSONAS ─────────────────────────────────────────────
+
+    function abrirEditarPersona(cedula, n1, n2, a1, a2, barrio) {
+        document.getElementById('editPersonaCedula').value = cedula;
+        document.getElementById('editPersonaN1').value     = n1;
+        document.getElementById('editPersonaN2').value     = n2;
+        document.getElementById('editPersonaA1').value     = a1;
+        document.getElementById('editPersonaA2').value     = a2;
+        new bootstrap.Modal(document.getElementById('editarPersonaModal')).show();
+    }
+
+    function seleccionarPersonaEditar(sel) {
+        const opt = sel.options[sel.selectedIndex];
+        if (!opt.value) return;
+        document.getElementById('editPersonaCedula').value = opt.value;
+        document.getElementById('editPersonaN1').value     = opt.dataset.n1;
+        document.getElementById('editPersonaN2').value     = opt.dataset.n2;
+        document.getElementById('editPersonaA1').value     = opt.dataset.a1;
+        document.getElementById('editPersonaA2').value     = opt.dataset.a2;
+    }
+
+    function confirmarEliminarPersona(cedula, nombre) {
+        document.getElementById('elimPersonaCedula').value = cedula;
+        document.getElementById('elimPersonaNombre').textContent = nombre;
+        document.getElementById('selectElimPersona').value = cedula;
+        document.getElementById('elimPersonaAlert').style.display = 'block';
+        document.getElementById('btnConfElimPersona').disabled = false;
+        new bootstrap.Modal(document.getElementById('eliminarPersonaModal')).show();
+    }
+
+    function seleccionarPersonaEliminar(sel) {
+        const opt = sel.options[sel.selectedIndex];
+        const alert = document.getElementById('elimPersonaAlert');
+        const btn   = document.getElementById('btnConfElimPersona');
+        if (!opt.value) { alert.style.display = 'none'; btn.disabled = true; return; }
+        document.getElementById('elimPersonaCedula').value = opt.value;
+        document.getElementById('elimPersonaNombre').textContent = opt.dataset.nombre;
+        alert.style.display = 'block';
+        btn.disabled = false;
+    }
+</script>
+}

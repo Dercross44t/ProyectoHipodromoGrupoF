@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="ProyectoHipodromoGrupoF.AccesoADatos/ProyectoHipodromoGrupoF.AccesoADatos.csproj" />
+  <Project Path="ProyectoHipodromoGrupoF.Logica/ProyectoHipodromoGrupoF.Logica.csproj" />
+  <Project Path="ProyectoHipodromoGrupoF.Modelo/ProyectoHipodromoGrupoF.Modelo.csproj" />
+  <Project Path="ProyectoHipodromoGrupoF.UI/ProyectoHipodromoGrupoF.UI.csproj" />
+</Solution>

@@ -1,0 +1,197 @@
+@{
+    ViewData["Title"] = "Iniciar Sesión";
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hipódromo Nacional — Acceso al Sistema</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" />
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            min-height: 100vh;
+            background: radial-gradient(ellipse at top left, #1a1a2e 0%, #0d1117 50%, #12162a 100%);
+            font-family: 'Outfit', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        body::before {
+            content: '';
+            position: absolute;
+            width: 600px; height: 600px;
+            background: radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%);
+            top: -100px; left: -100px;
+            border-radius: 50%;
+        }
+        body::after {
+            content: '';
+            position: absolute;
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, rgba(16,185,129,0.1) 0%, transparent 70%);
+            bottom: -100px; right: -100px;
+            border-radius: 50%;
+        }
+        .login-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 48px 40px;
+            width: 100%;
+            max-width: 420px;
+            position: relative;
+            z-index: 1;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.5);
+        }
+        .login-logo {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        .login-logo .icon-wrap {
+            width: 72px; height: 72px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            color: white;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 24px rgba(99,102,241,0.4);
+        }
+        .login-logo h1 {
+            font-size: 22px;
+            font-weight: 700;
+            color: white;
+            margin: 0 0 4px;
+        }
+        .login-logo p {
+            font-size: 13px;
+            color: rgba(255,255,255,0.45);
+            margin: 0;
+        }
+        .form-label {
+            color: rgba(255,255,255,0.7);
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+        .form-control-login {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 12px;
+            color: white;
+            padding: 12px 16px;
+            font-size: 14px;
+            font-family: 'Outfit', sans-serif;
+            width: 100%;
+            transition: all 0.2s ease;
+        }
+        .form-control-login:focus {
+            outline: none;
+            border-color: rgba(99,102,241,0.6);
+            background: rgba(99,102,241,0.08);
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+        }
+        .form-control-login::placeholder { color: rgba(255,255,255,0.25); }
+        .btn-login {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-family: 'Outfit', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            padding: 13px;
+            width: 100%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 8px;
+            box-shadow: 0 4px 16px rgba(99,102,241,0.35);
+        }
+        .btn-login:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 24px rgba(99,102,241,0.45);
+        }
+        .alert-error {
+            background: rgba(239,68,68,0.12);
+            border: 1px solid rgba(239,68,68,0.3);
+            border-radius: 10px;
+            color: #fca5a5;
+            padding: 10px 14px;
+            font-size: 13px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .input-group-login { position: relative; margin-bottom: 20px; }
+        .input-icon {
+            position: absolute;
+            left: 14px; top: 50%;
+            transform: translateY(-50%);
+            color: rgba(255,255,255,0.3);
+            font-size: 14px;
+            pointer-events: none;
+        }
+        .form-control-login.with-icon { padding-left: 38px; }
+        .footer-text {
+            text-align: center;
+            color: rgba(255,255,255,0.2);
+            font-size: 11px;
+            margin-top: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="login-logo">
+            <div class="icon-wrap"><i class="fa-solid fa-horse-head"></i></div>
+            <h1>Hipódromo Nacional</h1>
+            <p>Sistema de Control de Carreras</p>
+        </div>
+
+        @if (ViewBag.Error != null)
+        {
+            <div class="alert-error">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                @ViewBag.Error
+            </div>
+        }
+
+        <form method="post" asp-action="Login" asp-controller="Auth">
+            @Html.AntiForgeryToken()
+            <div class="mb-3">
+                <label class="form-label">Usuario</label>
+                <div class="input-group-login">
+                    <i class="fa-solid fa-user input-icon"></i>
+                    <input type="text" name="username" class="form-control-login with-icon"
+                           placeholder="Nombre de usuario" required autofocus autocomplete="username" id="loginUsername">
+                </div>
+            </div>
+            <div class="mb-4">
+                <label class="form-label">Contraseña</label>
+                <div class="input-group-login">
+                    <i class="fa-solid fa-lock input-icon"></i>
+                    <input type="password" name="password" class="form-control-login with-icon"
+                           placeholder="••••••••" required autocomplete="current-password" id="loginPassword">
+                </div>
+            </div>
+            <button type="submit" class="btn-login" id="btnLogin">
+                <i class="fa-solid fa-right-to-bracket me-2"></i> Ingresar al Sistema
+            </button>
+        </form>
+
+        <div class="footer-text">Hipódromo Nacional &copy; @DateTime.Now.Year — Grupo F</div>
+    </div>
+</body>
+</html>

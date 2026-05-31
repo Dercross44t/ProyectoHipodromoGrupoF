@@ -1,0 +1,126 @@
+@model IEnumerable<ProyectoHipodromoGrupoF.Modelo.Alimentacion>
+@{
+    ViewData["Title"] = "Registro de Alimentación";
+    var caballos = ViewBag.Caballos as IEnumerable<ProyectoHipodromoGrupoF.Modelo.Caballo> ?? new List<ProyectoHipodromoGrupoF.Modelo.Caballo>();
+    var suministros = ViewBag.Suministros as IEnumerable<ProyectoHipodromoGrupoF.Modelo.Suministro> ?? new List<ProyectoHipodromoGrupoF.Modelo.Suministro>();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <p class="text-secondary m-0">Control diario de raciones para equinos.</p>
+    @if(User.IsInRole("3"))
+    {
+        <button class="btn btn-primary-custom" data-bs-toggle="modal" data-bs-target="#nuevaAlimentacionModal">
+            <i class="fa-solid fa-utensils me-2"></i> Registrar Alimentación
+        </button>
+    }
+</div>
+
+<!-- Nav Tabs -->
+<ul class="nav nav-pills mb-4 border-bottom border-secondary pb-3">
+  <li class="nav-item">
+    <a class="nav-link text-secondary" asp-action="Index">Suministros en Stock</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link active bg-transparent text-primary fw-bold" asp-action="Alimentacion">Registro de Alimentación</a>
+  </li>
+</ul>
+
+<div class="glass-panel p-4">
+    <table class="table table-glass w-100">
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Caballo</th>
+                <th>Suministro (Alimento)</th>
+                <th>Fecha</th>
+                <th>Cantidad Dadas</th>
+                <th class="text-end">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td class="fw-bold">@item.Codigo</td>
+                    <td><i class="fa-solid fa-horse-head text-secondary me-1"></i> @item.CodigoCaballo</td>
+                    <td>@item.CodigoSuministro</td>
+                    <td>@item.Fecha.ToString("dd/MM/yyyy")</td>
+                    <td>@item.Cantidad uds</td>
+                    <td class="text-end">
+                        @if(User.IsInRole("3"))
+                        {
+                            <form asp-action="EliminarAlimentacion" method="post" style="display:inline;"
+                                  onsubmit="return confirm('¿Eliminar este registro de alimentación?')">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="codigo" value="@item.Codigo" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger border-0">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </form>
+                        }
+                    </td>
+                </tr>
+            }
+            @if(!Model.Any())
+            {
+                <tr>
+                    <td colspan="6" class="text-center text-secondary py-4">No hay registros de alimentación.</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal Alimentacion -->
+@if(User.IsInRole("3"))
+{
+<div class="modal fade" id="nuevaAlimentacionModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content glass-card border-0">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title text-white">Registrar Alimentación</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form asp-action="InsertarAlimentacion" method="post">
+        @Html.AntiForgeryToken()
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label text-white">Caballo</label>
+            <select name="CodigoCaballo" class="form-control form-control-glass" required>
+                <option value="">— Seleccione caballo —</option>
+                @foreach (var c in caballos)
+                {
+                    <option value="@c.Codigo">@c.Nombre (@c.Codigo)</option>
+                }
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label text-white">Alimento / Suministro</label>
+            <select name="CodigoSuministro" class="form-control form-control-glass" required>
+                <option value="">— Seleccione suministro —</option>
+                @foreach (var s in suministros)
+                {
+                    <option value="@s.Codigo">@s.Nombre (Stock: @s.CantidadDisponible)</option>
+                }
+            </select>
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label text-white">Fecha</label>
+                <input type="date" name="Fecha" class="form-control form-control-glass" required value="@DateTime.Today.ToString("yyyy-MM-dd")">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label text-white">Cantidad</label>
+                <input type="number" name="Cantidad" class="form-control form-control-glass" required min="1">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary-custom">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+}

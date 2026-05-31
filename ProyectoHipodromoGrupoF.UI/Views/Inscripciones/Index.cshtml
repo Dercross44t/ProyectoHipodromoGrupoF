@@ -1,0 +1,306 @@
+@model IEnumerable<ProyectoHipodromoGrupoF.Modelo.Inscripcion>
+@{
+    ViewData["Title"] = "Gestión de Inscripciones";
+    var eventos   = ViewBag.Eventos            as List<ProyectoHipodromoGrupoF.Modelo.Evento>        ?? new();
+    var caballos  = ViewBag.Caballos           as List<ProyectoHipodromoGrupoF.Modelo.Caballo>       ?? new();
+    var certificaciones = ViewBag.Certificaciones as System.Collections.Generic.Dictionary<string, bool> ?? new();
+    var estadosInsc = ViewBag.EstadosInscripcion as List<ProyectoHipodromoGrupoF.Modelo.CatalogoItem> ?? new();
+    var esPropietario = User.IsInRole("1");
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <p class="text-secondary m-0">Registro y estado de inscripciones de caballos en eventos.</p>
+    @if (User.IsInRole("1"))
+    {
+        <button class="btn btn-primary-custom" data-bs-toggle="modal" data-bs-target="#insertarInscripcionModal" id="btnNuevaInscripcion">
+            <i class="fa-solid fa-plus me-2"></i> Nueva Inscripción
+        </button>
+    }
+</div>
+
+<!-- Alerta certificación -->
+<div class="glass-card p-3 mb-3" id="alertCertificacion" style="display:none; background:rgba(239,68,68,0.1); border-left:3px solid #ef4444;">
+    <i class="fa-solid fa-circle-exclamation text-danger me-2"></i>
+    <strong class="text-danger">¡Atención!</strong>
+    <span class="text-secondary" id="msgCertificacion">Este caballo no tiene certificación veterinaria vigente.</span>
+</div>
+
+<div class="glass-panel p-0 overflow-hidden">
+    <table class="table table-glass w-100 mb-0">
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Evento</th>
+                <th>Caballo</th>
+                <th>Fecha</th>
+                <th>Estado</th>
+                <th class="text-end">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var i in Model)
+            {
+                var estadoNombre = estadosInsc.FirstOrDefault(e => e.Id == i.IdCatEstadoInscripcion)?.Nombre ?? i.IdCatEstadoInscripcion.ToString();
+                var eventoNombre = eventos.FirstOrDefault(e => e.Codigo == i.CodigoEvento)?.Nombre ?? i.CodigoEvento;
+                var caballoNombre = caballos.FirstOrDefault(c => c.Codigo == i.CodigoCaballo)?.Nombre ?? i.CodigoCaballo;
+                var estadoCls = i.IdCatEstadoInscripcion == 1 ? "badge bg-warning text-dark" : i.IdCatEstadoInscripcion == 2 ? "badge badge-active" : "badge bg-danger";
+                <tr>
+                    <td><code class="text-accent">@i.Codigo</code></td>
+                    <td>@eventoNombre</td>
+                    <td><i class="fa-solid fa-horse text-secondary me-1"></i>@caballoNombre</td>
+                    <td>@i.Fecha.ToString("dd/MM/yyyy")</td>
+                    <td><span class="@estadoCls">@estadoNombre</span></td>
+                    <td class="text-end">
+                        @if (User.IsInRole("2"))
+                        {
+                            <button class="btn btn-sm btn-outline-secondary border-0 me-1"
+                                    onclick="abrirEditarInscripcion('@i.Codigo','@i.CodigoEvento','@i.CodigoCaballo',@i.IdCatEstadoInscripcion)"
+                                    id="btnEditarInsc_@i.Codigo" title="Editar">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger border-0"
+                                    onclick="confirmarEliminarInscripcion('@i.Codigo','@caballoNombre')"
+                                    id="btnEliminarInsc_@i.Codigo" title="Eliminar">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        }
+                        @if (esPropietario && i.IdCatEstadoInscripcion == 1)
+                        {
+                            <form asp-action="CancelarInscripcion" method="post" style="display:inline;" onsubmit="return confirm('¿Seguro que deseas cancelar tu inscripción para @caballoNombre en este evento?');">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="codigo" value="@i.Codigo">
+                                <button type="submit" class="btn btn-sm btn-outline-danger border-0" title="Cancelar Inscripción">
+                                    <i class="fa-solid fa-ban"></i> Cancelar
+                                </button>
+                            </form>
+                        }
+                    </td>
+                </tr>
+            }
+            @if (!Model.Any())
+            {
+                <tr><td colspan="6" class="text-center text-secondary py-5">
+                    <i class="fa-solid fa-clipboard-list fa-2x mb-2 d-block opacity-25"></i>
+                    No hay inscripciones registradas.
+                </td></tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- MODAL INSERTAR -->
+<div class="modal fade" id="insertarInscripcionModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content glass-card border-0">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title text-white"><i class="fa-solid fa-clipboard-list me-2"></i>Nueva Inscripción</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form asp-action="InsertarInscripcion" method="post" id="formInsertarInscripcion">
+        @Html.AntiForgeryToken()
+        <div class="modal-body">
+            <div id="alertCertModal" class="mb-3 p-3 rounded" style="display:none; background:rgba(239,68,68,0.12); border-left:3px solid #ef4444;">
+                <i class="fa-solid fa-triangle-exclamation text-danger me-2"></i>
+                <span class="text-danger fw-bold">Sin certificación vigente.</span>
+                <span class="text-secondary"> El caballo no tiene certificación veterinaria válida.</span>
+            </div>
+            <div class="mb-3">
+                <label class="form-label text-white">Evento *</label>
+                <select name="CodigoEvento" class="form-control form-control-glass" required id="selectEventoInsc">
+                    <option value="">— Seleccione un evento —</option>
+                    @foreach (var e in eventos.Where(ev => ev.IdCatEstadoEvento == 1)) {
+                        <option value="@e.Codigo">@e.Nombre — @e.Fecha.ToString("dd/MM/yyyy")</option>
+                    }
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label text-white">Caballo *</label>
+                <select name="CodigoCaballo" class="form-control form-control-glass" required id="selectCaballoInsc"
+                        onchange="verificarCertificacion(this.value)">
+                    <option value="">— Seleccione un caballo —</option>
+                    @foreach (var c in caballos) {
+                        var tieneCert = certificaciones.ContainsKey(c.Codigo) && certificaciones[c.Codigo];
+                        var esApto = c.IdCatEstadoCaballo <= 3; // 1=Perfecto, 2=Bueno, 3=Regular
+                        if (tieneCert && esApto) {
+                            <option value="@c.Codigo">@c.Nombre (@c.Codigo)</option>
+                        } else {
+                            var razon = !esApto ? "Salud inactiva" : "Sin certificación";
+                            if (!esApto && !tieneCert) razon = "Sin cert. y mala salud";
+                            <option value="@c.Codigo" disabled class="text-danger">@c.Nombre (@c.Codigo) — @razon</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label text-white">Fecha de inscripción</label>
+                <input type="date" name="Fecha" class="form-control form-control-glass"
+                       value="@DateTime.Today.ToString("yyyy-MM-dd")" readonly id="inputFechaInsc">
+            </div>
+            <div class="mb-3" style="display:none;">
+                <label class="form-label text-white">Estado *</label>
+                <select name="IdCatEstadoInscripcion" class="form-control form-control-glass" id="selectEstadoInsc">
+                    <option value="1" selected>Pendiente</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer border-secondary">
+            <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary-custom" id="btnSubmitInscripcion">
+                <i class="fa-solid fa-floppy-disk me-1"></i> Inscribir
+            </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR -->
+@if (User.IsInRole("2"))
+{
+<div class="modal fade" id="editarInscripcionModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content glass-card border-0">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title text-white"><i class="fa-solid fa-pen me-2"></i>Editar Inscripción</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form asp-action="ActualizarInscripcion" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="Codigo" id="editInscCodigo">
+        <div class="modal-body">
+            <div class="mb-3">
+                <label class="form-label text-white">Seleccionar inscripción</label>
+                <select class="form-control form-control-glass" onchange="seleccionarInscEditar(this)">
+                    <option value="">— Seleccione —</option>
+                    @foreach (var i in Model) {
+                        var cn = caballos.FirstOrDefault(c => c.Codigo == i.CodigoCaballo)?.Nombre ?? i.CodigoCaballo;
+                        var en = eventos.FirstOrDefault(e => e.Codigo == i.CodigoEvento)?.Nombre ?? i.CodigoEvento;
+                        <option value="@i.Codigo" data-evento="@i.CodigoEvento" data-caballo="@i.CodigoCaballo" data-estado="@i.IdCatEstadoInscripcion">
+                            @cn → @en
+                        </option>
+                    }
+                </select>
+            </div>
+            <div class="mb-3">
+                <input type="hidden" name="CodigoEvento" id="editInscEventoHidden">
+                <label class="form-label text-white">Evento *</label>
+                <select id="editInscEvento" class="form-control form-control-glass" disabled>
+                    @foreach (var e in eventos) { <option value="@e.Codigo">@e.Nombre</option> }
+                </select>
+            </div>
+            <div class="mb-3">
+                <input type="hidden" name="CodigoCaballo" id="editInscCaballoHidden">
+                <label class="form-label text-white">Caballo *</label>
+                <select id="editInscCaballo" class="form-control form-control-glass" disabled>
+                    @foreach (var c in caballos) {
+                        var tieneCert = certificaciones.ContainsKey(c.Codigo) && certificaciones[c.Codigo];
+                        var esApto = c.IdCatEstadoCaballo <= 3; // 1=Perfecto, 2=Bueno, 3=Regular
+                        if (tieneCert && esApto) {
+                            <option value="@c.Codigo">@c.Nombre (@c.Codigo)</option>
+                        } else {
+                            var razon = !esApto ? "Salud inactiva" : "Sin certificación";
+                            if (!esApto && !tieneCert) razon = "Sin cert. y mala salud";
+                            <option value="@c.Codigo" disabled class="text-danger">@c.Nombre (@c.Codigo) — @razon</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label text-white">Estado *</label>
+                <select name="IdCatEstadoInscripcion" id="editInscEstado" class="form-control form-control-glass" required>
+                    @foreach (var e in estadosInsc) { <option value="@e.Id">@e.Nombre</option> }
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer border-secondary">
+            <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary-custom">
+                <i class="fa-solid fa-floppy-disk me-1"></i> Actualizar
+            </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ELIMINAR -->
+<div class="modal fade" id="eliminarInscripcionModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content glass-card border-0">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title text-white"><i class="fa-solid fa-trash me-2 text-danger"></i>Eliminar Inscripción</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+          <p class="text-secondary">¿Confirmas eliminar la inscripción del caballo <strong class="text-white" id="elimInscNombre"></strong>?</p>
+      </div>
+      <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+          <form asp-action="EliminarInscripcion" method="post" style="display:inline;">
+              @Html.AntiForgeryToken()
+              <input type="hidden" name="codigo" id="elimInscCodigo">
+              <button type="submit" class="btn btn-danger" id="btnConfirmarElimInsc">
+                  <i class="fa-solid fa-trash me-1"></i> Eliminar
+              </button>
+          </form>
+      </div>
+    </div>
+  </div>
+</div>
+}
+
+@section Scripts {
+<script>
+    // Verificar certificación antes de permitir submit
+    async function verificarCertificacion(codigoCaballo) {
+        if (!codigoCaballo) return;
+        const alertDiv = document.getElementById('alertCertModal');
+        const btn = document.getElementById('btnSubmitInscripcion');
+        try {
+            const res  = await fetch(`/Inscripciones/VerificarCertificacion?codigoCaballo=${encodeURIComponent(codigoCaballo)}`);
+            const data = await res.json();
+            if (!data.tieneCertificacion) {
+                alertDiv.style.display = 'block';
+                btn.disabled = true;
+                btn.title = 'El caballo no tiene certificación vigente.';
+            } else {
+                alertDiv.style.display = 'none';
+                btn.disabled = false;
+                btn.title = '';
+            }
+        } catch { alertDiv.style.display = 'none'; btn.disabled = false; }
+    }
+
+    function abrirEditarInscripcion(codigo, evento, caballo, estado) {
+        document.getElementById('editInscCodigo').value = codigo;
+        setVal('editInscEvento', evento);
+        setVal('editInscEventoHidden', evento);
+        setVal('editInscCaballo', caballo);
+        setVal('editInscCaballoHidden', caballo);
+        setVal('editInscEstado',  estado);
+        new bootstrap.Modal(document.getElementById('editarInscripcionModal')).show();
+    }
+
+    function seleccionarInscEditar(sel) {
+        const opt = sel.options[sel.selectedIndex];
+        if (!opt.value) return;
+        document.getElementById('editInscCodigo').value = opt.value;
+        setVal('editInscEvento',  opt.dataset.evento);
+        setVal('editInscEventoHidden', opt.dataset.evento);
+        setVal('editInscCaballo', opt.dataset.caballo);
+        setVal('editInscCaballoHidden', opt.dataset.caballo);
+        setVal('editInscEstado',  opt.dataset.estado);
+    }
+
+    function confirmarEliminarInscripcion(codigo, nombre) {
+        document.getElementById('elimInscCodigo').value = codigo;
+        document.getElementById('elimInscNombre').textContent = nombre;
+        new bootstrap.Modal(document.getElementById('eliminarInscripcionModal')).show();
+    }
+
+    function setVal(id, val) {
+        const el = document.getElementById(id);
+        if (el) el.value = val;
+    }
+</script>
+}

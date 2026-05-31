@@ -1,0 +1,225 @@
+@model IEnumerable<ProyectoHipodromoGrupoF.Modelo.Usuario>
+@{
+    ViewData["Title"] = "Gestión de Usuarios";
+    var personas = ViewBag.Personas as List<ProyectoHipodromoGrupoF.Modelo.Persona> ?? new();
+    var provincias = ViewBag.Provincias as List<ProyectoHipodromoGrupoF.Modelo.CatProvincia> ?? new();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <p class="text-secondary m-0">Administración de acceso al sistema y roles de usuario.</p>
+    @if(User.IsInRole("2"))
+    {
+        <button class="btn btn-primary-custom" data-bs-toggle="modal" data-bs-target="#nuevoUsuarioModal">
+            <i class="fa-solid fa-user-plus me-2"></i> Nuevo Usuario
+        </button>
+    }
+</div>
+
+<!-- Nav Tabs -->
+<ul class="nav nav-pills mb-4 border-bottom border-secondary pb-3">
+  <li class="nav-item">
+    <a class="nav-link active bg-transparent text-primary fw-bold" asp-action="Index">Usuarios del Sistema</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link text-secondary" asp-action="Propietarios">Directorio de Propietarios</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link text-secondary" asp-action="Veterinarios">Personal Veterinario</a>
+  </li>
+</ul>
+
+<div class="glass-panel p-4">
+    <table class="table table-glass w-100">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nombre Real</th>
+                <th>Cédula</th>
+                <th>Usuario</th>
+                <th>Rol</th>
+                <th class="text-end">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td class="fw-bold">@item.Codigo</td>
+                    <td>
+                        @{
+                            var persona = personas.FirstOrDefault(p => p.Cedula == item.Cedula);
+                            var nombreReal = persona != null ? $"{persona.Nombre1} {persona.Apellido1}" : "Desconocido";
+                        }
+                        <span class="text-secondary">@nombreReal</span>
+                    </td>
+                    <td>@item.Cedula</td>
+                    <td><i class="fa-solid fa-user text-secondary me-2"></i>@item.Nombre</td>
+                    <td>
+                        @if (item.IdCatRol == 1) { <span class="badge bg-primary">Propietario</span> }
+                        else if (item.IdCatRol == 2) { <span class="badge bg-danger">Administrador</span> }
+                        else if (item.IdCatRol == 3) { <span class="badge bg-info text-dark">Encargado Establo</span> }
+                        else if (item.IdCatRol == 4) { <span class="badge bg-success">Veterinario</span> }
+                        else { <span class="badge bg-secondary">Sin rol</span> }
+                    </td>
+                    <td class="text-end">
+                        @if(User.IsInRole("2"))
+                        {
+                            <form asp-action="EliminarUsuario" method="post" style="display:inline;"
+                                  onsubmit="return confirm('¿Eliminar el usuario @item.Nombre?')">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="codigo" value="@item.Codigo" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger border-0">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </form>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal Nuevo Usuario -->
+@if(User.IsInRole("2"))
+{
+<div class="modal fade" id="nuevoUsuarioModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content glass-card border-0">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title text-white">Registrar Usuario</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form asp-action="InsertarUsuario" method="post">
+        @Html.AntiForgeryToken()
+        <div class="modal-body">
+          <div class="alert alert-info border-0" style="background: rgba(13, 202, 240, 0.1); color: #0dcaf0;">
+              <i class="fa-solid fa-circle-info me-2"></i> Si la cédula ya está registrada como Persona, los datos personales se ignorarán y solo se le creará la cuenta de Usuario.
+          </div>
+          <div class="row g-3">
+              <!-- Datos de Persona -->
+              <div class="col-md-3">
+                <label class="form-label text-white">Cédula * (9 dígitos)</label>
+                <input type="text" name="Cedula" class="form-control form-control-glass" required pattern="[0-9]{9}" maxlength="9" placeholder="123456789">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label text-white">Primer Nombre *</label>
+                <input type="text" name="Nombre1" class="form-control form-control-glass" maxlength="50">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label text-white">Segundo Nombre</label>
+                <input type="text" name="Nombre2" class="form-control form-control-glass" maxlength="50">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label text-white">Primer Apellido *</label>
+                <input type="text" name="Apellido1" class="form-control form-control-glass" maxlength="50">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label text-white">Segundo Apellido *</label>
+                <input type="text" name="Apellido2" class="form-control form-control-glass" maxlength="50">
+              </div>
+
+              <!-- Dirección cascada -->
+              <div class="col-md-3">
+                  <label class="form-label text-white">Provincia</label>
+                  <select class="form-control form-control-glass" id="selectProvincia" onchange="cargarCantones(this.value,'selectCanton','selectDistrito','selectBarrio')">
+                      <option value="">— Seleccione —</option>
+                      @foreach (var pr in provincias) { <option value="@pr.Id">@pr.Nombre</option> }
+                  </select>
+              </div>
+              <div class="col-md-3">
+                  <label class="form-label text-white">Cantón</label>
+                  <select class="form-control form-control-glass" id="selectCanton" disabled onchange="cargarDistritos(this.value,'selectDistrito','selectBarrio')">
+                      <option value="">— Seleccione provincia —</option>
+                  </select>
+              </div>
+              <div class="col-md-3">
+                  <label class="form-label text-white">Distrito</label>
+                  <select class="form-control form-control-glass" id="selectDistrito" disabled onchange="cargarBarrios(this.value,'selectBarrio')">
+                      <option value="">— Seleccione cantón —</option>
+                  </select>
+              </div>
+              <div class="col-md-3">
+                  <label class="form-label text-white">Barrio</label>
+                  <select name="IdCatBarrio" class="form-control form-control-glass" id="selectBarrio" disabled>
+                      <option value="">— Seleccione distrito —</option>
+                  </select>
+              </div>
+              
+              <!-- Datos de Usuario -->
+              <div class="col-12 mt-4"><hr class="border-secondary opacity-25"></div>
+              
+              <div class="col-md-4">
+                <label class="form-label text-white">Nombre de Usuario (Login) *</label>
+                <input type="text" name="Nombre" class="form-control form-control-glass" required maxlength="50">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label text-white">Contraseña *</label>
+                <input type="password" name="Contrasena" class="form-control form-control-glass" required maxlength="50">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label text-white">Rol del Sistema *</label>
+                <select name="IdCatRol" class="form-control form-control-glass" required>
+                    <option value="1">Propietario</option>
+                    <option value="2">Administrador</option>
+                    <option value="3">Encargado de Establo</option>
+                    <option value="4">Veterinario</option>
+                </select>
+              </div>
+          </div>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary-custom">Guardar Usuario</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+}
+
+@section Scripts {
+<script>
+    async function cargarCantones(idProvincia, cantonId, distritoId, barrioId) {
+        const canton   = document.getElementById(cantonId);
+        const distrito = document.getElementById(distritoId);
+        const barrio   = document.getElementById(barrioId);
+        canton.disabled = true; distrito.disabled = true; barrio.disabled = true;
+        canton.innerHTML   = '<option value="">Cargando...</option>';
+        distrito.innerHTML = '<option value="">— Seleccione cantón —</option>';
+        barrio.innerHTML   = '<option value="">— Seleccione distrito —</option>';
+
+        if (!idProvincia) { canton.innerHTML = '<option value="">— Seleccione provincia —</option>'; return; }
+        const data = await fetch(`/Personas/GetCantones?idProvincia=${idProvincia}`).then(r => r.json());
+        canton.innerHTML = '<option value="">— Seleccione —</option>';
+        data.forEach(c => { canton.innerHTML += `<option value="${c.id}">${c.nombre}</option>`; });
+        canton.disabled = false;
+    }
+
+    async function cargarDistritos(idCanton, distritoId, barrioId) {
+        const distrito = document.getElementById(distritoId);
+        const barrio   = document.getElementById(barrioId);
+        distrito.disabled = true; barrio.disabled = true;
+        distrito.innerHTML = '<option value="">Cargando...</option>';
+        barrio.innerHTML   = '<option value="">— Seleccione distrito —</option>';
+
+        if (!idCanton) { distrito.innerHTML = '<option value="">— Seleccione cantón —</option>'; return; }
+        const data = await fetch(`/Personas/GetDistritos?idCanton=${idCanton}`).then(r => r.json());
+        distrito.innerHTML = '<option value="">— Seleccione —</option>';
+        data.forEach(d => { distrito.innerHTML += `<option value="${d.id}">${d.nombre}</option>`; });
+        distrito.disabled = false;
+    }
+
+    async function cargarBarrios(idDistrito, barrioId) {
+        const barrio = document.getElementById(barrioId);
+        barrio.disabled = true;
+        barrio.innerHTML = '<option value="">Cargando...</option>';
+
+        if (!idDistrito) { barrio.innerHTML = '<option value="">— Seleccione distrito —</option>'; return; }
+        const data = await fetch(`/Personas/GetBarrios?idDistrito=${idDistrito}`).then(r => r.json());
+        barrio.innerHTML = '<option value="">— Seleccione —</option>';
+        data.forEach(b => { barrio.innerHTML += `<option value="${b.id}">${b.nombre}</option>`; });
+        barrio.disabled = false;
+    }
+</script>
+}

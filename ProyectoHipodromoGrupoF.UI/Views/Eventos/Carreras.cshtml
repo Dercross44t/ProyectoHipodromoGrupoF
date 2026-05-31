@@ -1,0 +1,186 @@
+@model IEnumerable<ProyectoHipodromoGrupoF.Modelo.Carrera>
+@{
+    ViewData["Title"] = "Tipos de Carrera";
+    var tiposCarrera = ViewBag.TiposCarrera as List<ProyectoHipodromoGrupoF.Modelo.CatalogoItem> ?? new();
+    var distancias   = ViewBag.Distancias   as List<ProyectoHipodromoGrupoF.Modelo.CatalogoItem> ?? new();
+}
+
+<!-- Nav Tabs -->
+<ul class="nav nav-pills mb-4 border-bottom border-secondary pb-3">
+  <li class="nav-item"><a class="nav-link text-secondary" asp-action="Index">Eventos</a></li>
+  <li class="nav-item"><a class="nav-link active bg-transparent text-primary fw-bold" asp-action="Carreras">Tipos de Carrera</a></li>
+</ul>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <p class="text-secondary m-0">Registro de tipos de carrera con su distancia y categoría.</p>
+    <button class="btn btn-primary-custom" data-bs-toggle="modal" data-bs-target="#insertarCarreraModal" id="btnNuevaCarrera">
+        <i class="fa-solid fa-plus me-2"></i> Nueva Carrera
+    </button>
+</div>
+
+<div class="glass-panel p-0 overflow-hidden">
+    <table class="table table-glass w-100 mb-0">
+        <thead>
+            <tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Distancia</th><th class="text-end">Acciones</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var c in Model)
+            {
+                <tr>
+                    <td><code class="text-accent">@c.Codigo</code></td>
+                    <td class="fw-bold">@c.Nombre</td>
+                    <td>@(tiposCarrera.FirstOrDefault(t => t.Id == c.IdCatTipoCarrera)?.Nombre ?? "—")</td>
+                    <td>@(distancias.FirstOrDefault(d => d.Id == c.IdCatDistancia)?.Nombre ?? "—")</td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-secondary border-0 me-1"
+                                onclick="abrirEditarCarrera('@c.Codigo','@c.Nombre',@c.IdCatTipoCarrera,@c.IdCatDistancia)"
+                                id="btnEditarCarrera_@c.Codigo">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger border-0"
+                                onclick="confirmarEliminarCarrera('@c.Codigo','@c.Nombre')"
+                                id="btnEliminarCarrera_@c.Codigo">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            }
+            @if (!Model.Any())
+            {
+                <tr><td colspan="5" class="text-center text-secondary py-5">No hay carreras registradas.</td></tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- MODAL INSERTAR -->
+<div class="modal fade" id="insertarCarreraModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content glass-card border-0">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title text-white"><i class="fa-solid fa-plus me-2"></i>Nueva Carrera</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form asp-action="InsertarCarrera" method="post">
+        @Html.AntiForgeryToken()
+        <div class="modal-body">
+            <div class="mb-3"><label class="form-label text-white">Nombre *</label>
+                <input type="text" name="Nombre" class="form-control form-control-glass" required maxlength="100" id="inputNombreCarrera"></div>
+            <div class="mb-3"><label class="form-label text-white">Tipo de Carrera *</label>
+                <select name="IdCatTipoCarrera" class="form-control form-control-glass" required id="selectTipoCarrera">
+                    <option value="">— Seleccione —</option>
+                    @foreach (var t in tiposCarrera) { <option value="@t.Id">@t.Nombre</option> }
+                </select>
+            </div>
+            <div class="mb-3"><label class="form-label text-white">Distancia *</label>
+                <select name="IdCatDistancia" class="form-control form-control-glass" required id="selectDistanciaCarrera">
+                    <option value="">— Seleccione —</option>
+                    @foreach (var d in distancias) { <option value="@d.Id">@d.Nombre</option> }
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer border-secondary">
+            <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary-custom" id="btnGuardarCarrera">
+                <i class="fa-solid fa-floppy-disk me-1"></i> Guardar
+            </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR -->
+<div class="modal fade" id="editarCarreraModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content glass-card border-0">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title text-white"><i class="fa-solid fa-pen me-2"></i>Editar Carrera</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form asp-action="ActualizarCarrera" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="Codigo" id="editCarreraCodigo">
+        <div class="modal-body">
+            <div class="mb-3"><label class="form-label text-white">Seleccionar carrera</label>
+                <select class="form-control form-control-glass" onchange="seleccionarCarreraEditar(this)">
+                    <option value="">— Seleccione —</option>
+                    @foreach (var c in Model) {
+                        <option value="@c.Codigo" data-nombre="@c.Nombre" data-tipo="@c.IdCatTipoCarrera" data-dist="@c.IdCatDistancia">@c.Nombre</option>
+                    }
+                </select>
+            </div>
+            <div class="mb-3"><label class="form-label text-white">Nombre *</label>
+                <input type="text" name="Nombre" id="editCarreraNombre" class="form-control form-control-glass" required maxlength="100"></div>
+            <div class="mb-3"><label class="form-label text-white">Tipo de Carrera *</label>
+                <select name="IdCatTipoCarrera" id="editCarreraTipo" class="form-control form-control-glass" required>
+                    @foreach (var t in tiposCarrera) { <option value="@t.Id">@t.Nombre</option> }
+                </select>
+            </div>
+            <div class="mb-3"><label class="form-label text-white">Distancia *</label>
+                <select name="IdCatDistancia" id="editCarreraDist" class="form-control form-control-glass" required>
+                    @foreach (var d in distancias) { <option value="@d.Id">@d.Nombre</option> }
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer border-secondary">
+            <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary-custom">
+                <i class="fa-solid fa-floppy-disk me-1"></i> Actualizar
+            </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ELIMINAR -->
+<div class="modal fade" id="eliminarCarreraModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content glass-card border-0">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title text-danger"><i class="fa-solid fa-trash me-2"></i>Eliminar Carrera</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+          <p class="text-secondary">¿Eliminar la carrera <strong class="text-white" id="elimCarreraNombre"></strong>?</p>
+      </div>
+      <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+          <form asp-action="EliminarCarrera" method="post" style="display:inline;">
+              @Html.AntiForgeryToken()
+              <input type="hidden" name="codigo" id="elimCarreraCodigo">
+              <button type="submit" class="btn btn-danger" id="btnConfirmarElimCarrera">
+                  <i class="fa-solid fa-trash me-1"></i> Eliminar
+              </button>
+          </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+    function abrirEditarCarrera(codigo, nombre, tipo, dist) {
+        document.getElementById('editCarreraCodigo').value = codigo;
+        document.getElementById('editCarreraNombre').value = nombre;
+        setVal('editCarreraTipo', tipo);
+        setVal('editCarreraDist', dist);
+        new bootstrap.Modal(document.getElementById('editarCarreraModal')).show();
+    }
+    function seleccionarCarreraEditar(sel) {
+        const opt = sel.options[sel.selectedIndex];
+        if (!opt.value) return;
+        document.getElementById('editCarreraCodigo').value = opt.value;
+        document.getElementById('editCarreraNombre').value = opt.dataset.nombre;
+        setVal('editCarreraTipo', opt.dataset.tipo);
+        setVal('editCarreraDist', opt.dataset.dist);
+    }
+    function confirmarEliminarCarrera(codigo, nombre) {
+        document.getElementById('elimCarreraCodigo').value = codigo;
+        document.getElementById('elimCarreraNombre').textContent = nombre;
+        new bootstrap.Modal(document.getElementById('eliminarCarreraModal')).show();
+    }
+    function setVal(id, val) { const el = document.getElementById(id); if(el) el.value = val; }
+</script>
+}

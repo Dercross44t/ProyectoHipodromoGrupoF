@@ -1,0 +1,223 @@
+@model IEnumerable<ProyectoHipodromoGrupoF.Modelo.ResultadoCarrera>
+@{
+    ViewData["Title"] = "Resultados de Carreras";
+    var inscripciones = ViewBag.Inscripciones as List<ProyectoHipodromoGrupoF.Modelo.Inscripcion> ?? new();
+    var caballos      = ViewBag.Caballos      as List<ProyectoHipodromoGrupoF.Modelo.Caballo>       ?? new();
+    var eventos       = ViewBag.Eventos       as List<ProyectoHipodromoGrupoF.Modelo.Evento>        ?? new();
+    var esAdmin       = User.IsInRole("2");
+}
+
+<style>
+    /* Podio CSS */
+    .podium-container {
+        display: flex;
+        justify-content: center;
+        align-items: flex-end;
+        gap: 15px;
+        min-height: 250px;
+        margin-bottom: 30px;
+    }
+    .podium-step {
+        text-align: center;
+        width: 150px;
+        border-radius: 8px 8px 0 0;
+        position: relative;
+        padding-top: 15px;
+        color: #fff;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        transition: transform 0.3s ease;
+    }
+    .podium-step:hover {
+        transform: translateY(-10px);
+    }
+    .step-1 { height: 180px; background: linear-gradient(145deg, #ffd700, #b8860b); z-index: 3; }
+    .step-2 { height: 140px; background: linear-gradient(145deg, #e0e0e0, #a9a9a9); z-index: 2; }
+    .step-3 { height: 110px; background: linear-gradient(145deg, #cd7f32, #8b4513); z-index: 1; }
+    
+    .podium-medal {
+        position: absolute;
+        top: -40px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 2.5rem;
+        filter: drop-shadow(0 2px 5px rgba(0,0,0,0.5));
+    }
+    .podium-number {
+        font-size: 3rem;
+        font-weight: 900;
+        opacity: 0.5;
+        margin-top: 10px;
+    }
+    
+    /* Table hover microinteractions */
+    .table-results tbody tr {
+        transition: all 0.2s ease;
+    }
+    .table-results tbody tr:hover {
+        background-color: rgba(255,255,255,0.05);
+        transform: scale(1.01);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <p class="text-secondary m-0">Registro histórico y posiciones de las carreras disputadas.</p>
+    @if (esAdmin)
+    {
+        <button class="btn btn-primary-custom" data-bs-toggle="modal" data-bs-target="#insertarResultadoModal">
+            <i class="fa-solid fa-plus me-2"></i> Registrar Resultado
+        </button>
+    }
+</div>
+
+@{
+    var top3 = Model.Where(r => r.Posicion >= 1 && r.Posicion <= 3).OrderBy(r => r.Posicion).Take(3).ToList();
+}
+
+@if (top3.Any())
+{
+    <div class="glass-card p-4 mb-4">
+        <h4 class="text-white text-center mb-5"><i class="fa-solid fa-trophy text-warning me-2"></i>Últimos Ganadores</h4>
+        <div class="podium-container">
+            <!-- 2do Lugar -->
+            @if (top3.Count > 1)
+            {
+                var p2 = top3[1];
+                var insc2 = inscripciones.FirstOrDefault(i => i.Codigo == p2.CodigoInscripcion);
+                var cab2 = caballos.FirstOrDefault(c => c.Codigo == insc2?.CodigoCaballo)?.Nombre ?? "Desconocido";
+                <div class="podium-step step-2">
+                    <i class="fa-solid fa-medal podium-medal text-light"></i>
+                    <div class="fw-bold text-truncate px-2" title="@cab2">@cab2</div>
+                    <div class="podium-number">2</div>
+                </div>
+            }
+            
+            <!-- 1er Lugar -->
+            @if (top3.Count > 0)
+            {
+                var p1 = top3[0];
+                var insc1 = inscripciones.FirstOrDefault(i => i.Codigo == p1.CodigoInscripcion);
+                var cab1 = caballos.FirstOrDefault(c => c.Codigo == insc1?.CodigoCaballo)?.Nombre ?? "Desconocido";
+                <div class="podium-step step-1">
+                    <i class="fa-solid fa-crown podium-medal text-warning"></i>
+                    <div class="fw-bold text-truncate px-2 text-dark" title="@cab1">@cab1</div>
+                    <div class="podium-number text-dark">1</div>
+                </div>
+            }
+
+            <!-- 3er Lugar -->
+            @if (top3.Count > 2)
+            {
+                var p3 = top3[2];
+                var insc3 = inscripciones.FirstOrDefault(i => i.Codigo == p3.CodigoInscripcion);
+                var cab3 = caballos.FirstOrDefault(c => c.Codigo == insc3?.CodigoCaballo)?.Nombre ?? "Desconocido";
+                <div class="podium-step step-3">
+                    <i class="fa-solid fa-medal podium-medal" style="color: #cd7f32;"></i>
+                    <div class="fw-bold text-truncate px-2" title="@cab3">@cab3</div>
+                    <div class="podium-number">3</div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<div class="glass-panel p-0 overflow-hidden">
+    <table class="table table-glass table-results w-100 mb-0">
+        <thead>
+            <tr>
+                <th class="text-center">Posición</th>
+                <th>Caballo</th>
+                <th>Evento</th>
+                <th>Tiempo</th>
+                <th>Premio</th>
+                @if (esAdmin) { <th class="text-end">Acciones</th> }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var r in Model.OrderBy(x => x.Posicion))
+            {
+                var insc = inscripciones.FirstOrDefault(i => i.Codigo == r.CodigoInscripcion);
+                var cab = caballos.FirstOrDefault(c => c.Codigo == insc?.CodigoCaballo)?.Nombre ?? "Desconocido";
+                var ev = eventos.FirstOrDefault(e => e.Codigo == insc?.CodigoEvento)?.Nombre ?? "Desconocido";
+                
+                <tr>
+                    <td class="text-center fw-bold fs-5">
+                        @if (r.Posicion == 1) { <i class="fa-solid fa-trophy text-warning me-1"></i> }
+                        else if (r.Posicion == 2) { <i class="fa-solid fa-medal text-light me-1"></i> }
+                        else if (r.Posicion == 3) { <i class="fa-solid fa-medal me-1" style="color: #cd7f32;"></i> }
+                        <span class="@(r.Posicion <= 3 ? "text-white" : "text-secondary")">@r.Posicion</span>
+                    </td>
+                    <td><i class="fa-solid fa-horse text-secondary me-2"></i><span class="text-white fw-bold">@cab</span></td>
+                    <td class="text-secondary">@ev</td>
+                    <td><i class="fa-solid fa-stopwatch text-info me-1"></i>@(r.Tiempo ?? "—")</td>
+                    <td class="text-success fw-bold">₡@r.PremioObtenido.ToString("N0")</td>
+                    @if (esAdmin)
+                    {
+                        <td class="text-end">
+                            <form asp-action="EliminarResultado" method="post" style="display:inline;" onsubmit="return confirm('¿Eliminar este resultado?');">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="codigo" value="@r.Codigo">
+                                <button type="submit" class="btn btn-sm btn-outline-danger border-0"><i class="fa-solid fa-trash"></i></button>
+                            </form>
+                        </td>
+                    }
+                </tr>
+            }
+            @if (!Model.Any())
+            {
+                <tr><td colspan="6" class="text-center text-secondary py-5">
+                    <i class="fa-solid fa-flag-checkered fa-2x mb-2 d-block opacity-25"></i>
+                    No hay resultados registrados.
+                </td></tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (esAdmin)
+{
+<!-- MODAL INSERTAR -->
+<div class="modal fade" id="insertarResultadoModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content glass-card border-0">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title text-white"><i class="fa-solid fa-flag-checkered me-2"></i>Registrar Resultado</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form asp-action="InsertarResultado" method="post">
+        @Html.AntiForgeryToken()
+        <div class="modal-body">
+            <div class="mb-3">
+                <label class="form-label text-white">Inscripción *</label>
+                <select name="CodigoInscripcion" class="form-control form-control-glass" required>
+                    <option value="">— Seleccione —</option>
+                    @foreach (var i in inscripciones) {
+                        var cab = caballos.FirstOrDefault(c => c.Codigo == i.CodigoCaballo)?.Nombre;
+                        var ev = eventos.FirstOrDefault(e => e.Codigo == i.CodigoEvento)?.Nombre;
+                        <option value="@i.Codigo">@cab en @ev</option>
+                    }
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label text-white">Posición *</label>
+                <input type="number" name="Posicion" class="form-control form-control-glass" required min="1">
+            </div>
+            <div class="mb-3">
+                <label class="form-label text-white">Tiempo (ej. 01:23:45)</label>
+                <input type="text" name="Tiempo" class="form-control form-control-glass" placeholder="00:00:00">
+            </div>
+            <div class="mb-3">
+                <label class="form-label text-white">Premio Obtenido (₡)</label>
+                <input type="number" name="PremioObtenido" class="form-control form-control-glass bg-dark text-secondary" readonly value="0" title="El premio se calculará automáticamente según la posición.">
+                <small class="text-secondary">Autocalculado (60%, 25%, 15%) según el premio del evento.</small>
+            </div>
+        </div>
+        <div class="modal-footer border-secondary">
+            <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary-custom"><i class="fa-solid fa-floppy-disk me-1"></i> Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+}

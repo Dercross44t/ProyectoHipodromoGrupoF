@@ -1,0 +1,218 @@
+@model IEnumerable<ProyectoHipodromoGrupoF.Modelo.Evento>
+@{
+    ViewData["Title"] = "Eventos y Carreras";
+    var estadosEvento = ViewBag.EstadosEvento as List<ProyectoHipodromoGrupoF.Modelo.CatalogoItem> ?? new();
+    var carreras      = ViewBag.Carreras      as List<ProyectoHipodromoGrupoF.Modelo.Carrera>       ?? new();
+}
+
+<!-- Nav Tabs -->
+<ul class="nav nav-pills mb-4 border-bottom border-secondary pb-3">
+  <li class="nav-item"><a class="nav-link active bg-transparent text-primary fw-bold" asp-action="Index">Eventos</a></li>
+  @if(User.IsInRole("2"))
+  { <li class="nav-item"><a class="nav-link text-secondary" asp-action="Carreras">Tipos de Carrera</a></li> }
+</ul>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <p class="text-secondary m-0">Programación de eventos del hipódromo.</p>
+    @if(User.IsInRole("2"))
+    {
+        <button class="btn btn-primary-custom" data-bs-toggle="modal" data-bs-target="#insertarEventoModal" id="btnNuevoEvento">
+            <i class="fa-solid fa-plus me-2"></i> Programar Evento
+        </button>
+    }
+</div>
+
+<div class="glass-panel p-0 overflow-hidden">
+    <table class="table table-glass w-100 mb-0">
+        <thead>
+            <tr><th>Código</th><th>Nombre</th><th>Fecha</th><th>Premio Total</th><th>Carrera</th><th>Estado</th>
+                @if(User.IsInRole("2")) { <th class="text-end">Acciones</th> }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var e in Model)
+            {
+                var estadoNombre = estadosEvento.FirstOrDefault(s => s.Id == e.IdCatEstadoEvento)?.Nombre ?? "—";
+                var carreraNombre = carreras.FirstOrDefault(c => c.Codigo == e.CodigoCarrera)?.Nombre ?? "—";
+                var estadoCls = e.IdCatEstadoEvento == 1 ? "badge badge-active" : e.IdCatEstadoEvento == 3 ? "badge bg-danger" : "badge bg-secondary";
+                <tr>
+                    <td><code class="text-accent">@e.Codigo</code></td>
+                    <td>@e.Nombre</td>
+                    <td>@e.Fecha.ToString("dd/MM/yyyy")</td>
+                    <td><strong class="text-warning">@e.PremioTotal.ToString("C0", new System.Globalization.CultureInfo("es-CR"))</strong></td>
+                    <td class="text-secondary">@carreraNombre</td>
+                    <td><span class="@estadoCls">@estadoNombre</span></td>
+                    @if(User.IsInRole("2"))
+                    {
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-secondary border-0 me-1"
+                                    onclick="abrirEditarEvento('@e.Codigo','@e.Nombre','@e.Fecha.ToString("yyyy-MM-dd")',@e.PremioTotal,@e.IdCatEstadoEvento,'@e.CodigoCarrera')"
+                                    id="btnEditarEvento_@e.Codigo">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger border-0"
+                                    onclick="confirmarEliminarEvento('@e.Codigo','@e.Nombre')"
+                                    id="btnEliminarEvento_@e.Codigo">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </td>
+                    }
+                </tr>
+            }
+            @if (!Model.Any()) {
+                <tr><td colspan="7" class="text-center text-secondary py-5">
+                    <i class="fa-solid fa-flag-checkered fa-2x mb-2 d-block opacity-25"></i>
+                    No hay eventos programados.
+                </td></tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@if(User.IsInRole("2"))
+{
+<!-- MODAL INSERTAR EVENTO -->
+<div class="modal fade" id="insertarEventoModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content glass-card border-0">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title text-white"><i class="fa-solid fa-flag-checkered me-2"></i>Programar Evento</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form asp-action="InsertarEvento" method="post">
+        @Html.AntiForgeryToken()
+        <div class="modal-body">
+            <div class="mb-3"><label class="form-label text-white">Nombre del evento *</label>
+                <input type="text" name="Nombre" class="form-control form-control-glass" required maxlength="100" id="inputNombreEvento"></div>
+            <div class="mb-3"><label class="form-label text-white">Fecha *</label>
+                <input type="date" name="Fecha" class="form-control form-control-glass" required
+                       min="@DateTime.Now.ToString("yyyy-MM-dd")" id="inputFechaEvento"></div>
+            <div class="mb-3"><label class="form-label text-white">Premio Total (₡) *</label>
+                <input type="number" name="PremioTotal" class="form-control form-control-glass" required step="0.01" min="1" id="inputPremioEvento"></div>
+            <div class="mb-3"><label class="form-label text-white">Carrera asociada *</label>
+                <select name="CodigoCarrera" class="form-control form-control-glass" required id="selectCarreraEvento">
+                    <option value="">— Seleccione —</option>
+                    @foreach (var c in carreras) { <option value="@c.Codigo">@c.Nombre</option> }
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer border-secondary">
+            <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary-custom" id="btnGuardarEvento">
+                <i class="fa-solid fa-floppy-disk me-1"></i> Guardar
+            </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR EVENTO -->
+<div class="modal fade" id="editarEventoModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content glass-card border-0">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title text-white"><i class="fa-solid fa-pen me-2"></i>Editar Evento</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form asp-action="ActualizarEvento" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="Codigo" id="editEventoCodigo">
+        <div class="modal-body">
+            <div class="mb-3"><label class="form-label text-white">Seleccionar evento</label>
+                <select class="form-control form-control-glass" onchange="seleccionarEventoEditar(this)">
+                    <option value="">— Seleccione —</option>
+                    @foreach (var e in Model) {
+                        <option value="@e.Codigo" data-nombre="@e.Nombre" data-fecha="@e.Fecha.ToString("yyyy-MM-dd")"
+                                data-premio="@e.PremioTotal" data-estado="@e.IdCatEstadoEvento" data-carrera="@e.CodigoCarrera">
+                            @e.Nombre
+                        </option>
+                    }
+                </select>
+            </div>
+            <div class="mb-3"><label class="form-label text-white">Nombre *</label>
+                <input type="text" name="Nombre" id="editEventoNombre" class="form-control form-control-glass" required maxlength="100"></div>
+            <div class="mb-3"><label class="form-label text-white">Fecha *</label>
+                <input type="date" name="Fecha" id="editEventoFecha" class="form-control form-control-glass" required></div>
+            <div class="mb-3"><label class="form-label text-white">Premio Total (₡) *</label>
+                <input type="number" name="PremioTotal" id="editEventoPremio" class="form-control form-control-glass" required step="0.01" min="1"></div>
+            <div class="mb-3"><label class="form-label text-white">Estado *</label>
+                <select name="IdCatEstadoEvento" id="editEventoEstado" class="form-control form-control-glass" required>
+                    @foreach (var s in estadosEvento) { <option value="@s.Id">@s.Nombre</option> }
+                </select>
+            </div>
+            <div class="mb-3"><label class="form-label text-white">Carrera *</label>
+                <select name="CodigoCarrera" id="editEventoCarrera" class="form-control form-control-glass" required>
+                    @foreach (var c in carreras) { <option value="@c.Codigo">@c.Nombre</option> }
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer border-secondary">
+            <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary-custom">
+                <i class="fa-solid fa-floppy-disk me-1"></i> Actualizar
+            </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ELIMINAR EVENTO -->
+<div class="modal fade" id="eliminarEventoModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content glass-card border-0">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title text-danger"><i class="fa-solid fa-trash me-2"></i>Eliminar Evento</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+          <p class="text-secondary">¿Eliminar el evento <strong class="text-white" id="elimEventoNombre"></strong>?</p>
+      </div>
+      <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+          <form asp-action="EliminarEvento" method="post" style="display:inline;">
+              @Html.AntiForgeryToken()
+              <input type="hidden" name="codigo" id="elimEventoCodigo">
+              <button type="submit" class="btn btn-danger" id="btnConfirmarElimEvento">
+                  <i class="fa-solid fa-trash me-1"></i> Eliminar
+              </button>
+          </form>
+      </div>
+    </div>
+  </div>
+</div>
+}
+
+@section Scripts {
+<script>
+    function abrirEditarEvento(codigo, nombre, fecha, premio, estado, carrera) {
+        document.getElementById('editEventoCodigo').value = codigo;
+        document.getElementById('editEventoNombre').value = nombre;
+        document.getElementById('editEventoFecha').value  = fecha;
+        document.getElementById('editEventoPremio').value = premio;
+        setVal('editEventoEstado',  estado);
+        setVal('editEventoCarrera', carrera);
+        new bootstrap.Modal(document.getElementById('editarEventoModal')).show();
+    }
+
+    function seleccionarEventoEditar(sel) {
+        const opt = sel.options[sel.selectedIndex];
+        if (!opt.value) return;
+        document.getElementById('editEventoCodigo').value = opt.value;
+        document.getElementById('editEventoNombre').value = opt.dataset.nombre;
+        document.getElementById('editEventoFecha').value  = opt.dataset.fecha;
+        document.getElementById('editEventoPremio').value = opt.dataset.premio;
+        setVal('editEventoEstado',  opt.dataset.estado);
+        setVal('editEventoCarrera', opt.dataset.carrera);
+    }
+
+    function confirmarEliminarEvento(codigo, nombre) {
+        document.getElementById('elimEventoCodigo').value = codigo;
+        document.getElementById('elimEventoNombre').textContent = nombre;
+        new bootstrap.Modal(document.getElementById('eliminarEventoModal')).show();
+    }
+
+    function setVal(id, val) { const el = document.getElementById(id); if(el) el.value = val; }
+</script>
+}
