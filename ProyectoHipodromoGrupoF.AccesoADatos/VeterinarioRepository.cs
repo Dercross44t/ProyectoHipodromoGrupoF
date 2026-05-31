@@ -161,6 +161,22 @@ namespace ProyectoHipodromoGrupoF.AccesoADatos
             comando.Parameters.AddWithValue(codigo);
             comando.ExecuteNonQuery();
         }
+
+        public string ObtenerCodigoVeterinarioPorUsuario(string usuarioActual)
+        {
+            using var conexion = _conexionDB.ObtenerConexion();
+
+            using var comando = new NpgsqlCommand(
+                "SELECT public.obtener_codigo_veterinario_por_usuario($1)",
+                conexion);
+
+            comando.Parameters.AddWithValue(usuarioActual);
+
+            var resultado = comando.ExecuteScalar();
+
+            return resultado?.ToString() ?? string.Empty;
+        }
+
         public List<AlertaVeterinaria> ObtenerAlertasCertificacion()
         {
             var alertas = new List<AlertaVeterinaria>();

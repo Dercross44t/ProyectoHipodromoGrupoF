@@ -44,6 +44,11 @@ namespace ProyectoHipodromoGrupoF.Logica
         public void EliminarHistorial(string codigo, string usuarioActual) =>
             _veterinarioRepository.EliminarHistorial(codigo, usuarioActual);
 
+        public string ObtenerCodigoVeterinarioPorUsuario(string usuarioActual)
+        {
+            return _veterinarioRepository.ObtenerCodigoVeterinarioPorUsuario(usuarioActual);
+        }
+
         // ─── ALERTAS (2% rúbrica) ────────────────────────────────────────────────
 
         /// <summary>

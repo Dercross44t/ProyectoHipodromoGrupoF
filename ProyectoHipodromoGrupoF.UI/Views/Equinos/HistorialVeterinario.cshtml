@@ -101,14 +101,14 @@
         @Html.AntiForgeryToken()
         <div class="modal-body">
           <div class="row">
-            <div class="col-md-6 mb-3">
-                <label class="form-label text-white">Código Caballo</label>
-                <input type="text" name="CodigoCaballo" class="form-control form-control-glass" required maxlength="7">
-            </div>
-            <div class="col-md-6 mb-3">
-                <label class="form-label text-white">Código Veterinario</label>
-                <input type="text" name="CodigoVeterinario" class="form-control form-control-glass" required maxlength="10">
-            </div>
+           <label class="form-label text-white">Caballo *</label>
+           <select name="CodigoCaballo" class="form-control form-control-glass" required>
+           <option value="">— Seleccione un caballo —</option>
+              @foreach (var c in ViewBag.Caballos)
+               {
+                <option value="@c.Codigo">@c.Nombre (@c.Codigo)</option>
+               }
+            </select>
           </div>
           <div class="mb-3">
             <label class="form-label text-white">Diagnóstico</label>

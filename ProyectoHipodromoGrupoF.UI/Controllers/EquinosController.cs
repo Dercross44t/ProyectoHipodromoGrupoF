@@ -178,23 +178,32 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
         {
             try
             {
-                var usuarioActual = User.Identity?.Name ?? "usuario_desconocido";
-
                 if (historial.FechaVencimientoCertificacion < DateTime.Today.AddMonths(6))
                 {
-                   TempData["Error"] = "La fecha de vencimiento de la certificación debe ser mínimo 6 meses desde hoy.";
-                   return RedirectToAction("HistorialVeterinario");
+                    TempData["Error"] = "La fecha de vencimiento de la certificación debe ser mínimo 6 meses desde hoy.";
+                    return RedirectToAction("HistorialVeterinario");
+                }
+
+                var usuarioActual = User.Identity?.Name ?? "usuario_desconocido";
+
+                historial.CodigoVeterinario = _veterinarioService.ObtenerCodigoVeterinarioPorUsuario(usuarioActual);
+
+                if (string.IsNullOrWhiteSpace(historial.CodigoVeterinario))
+                {
+                    TempData["Error"] = "No se encontró un veterinario asociado al usuario actual.";
+                    return RedirectToAction("HistorialVeterinario");
                 }
 
                 _veterinarioService.InsertarHistorial(historial, usuarioActual);
-                TempData["Exito"] = $"Historial registrado.";
+
+                TempData["Exito"] = "Registro veterinario guardado correctamente.";
             }
             catch (Exception ex)
             {
                 TempData["Error"] = $"Error: {ex.Message}";
             }
 
-            return RedirectToAction("Index");
+            return RedirectToAction("HistorialVeterinario");
         }
 
         [HttpPost][ValidateAntiForgeryToken]
