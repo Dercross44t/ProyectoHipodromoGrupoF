@@ -43,6 +43,8 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
             return View(_usuarioService.ListarUsuarios());
         }
 
+
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult InsertarUsuario(Usuario usuario)
@@ -94,6 +96,17 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
             }
 
             return RedirectToAction("Index");
+        }
+
+        [HttpGet]
+        public IActionResult GetUbicacionPorBarrio(int idBarrio)
+        {
+            var ubicacion = _personasService.ObtenerUbicacionPorBarrio(idBarrio);
+
+            if (ubicacion == null)
+                return NotFound();
+
+            return Json(ubicacion);
         }
 
         [HttpPost]

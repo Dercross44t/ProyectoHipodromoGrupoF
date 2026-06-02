@@ -24,6 +24,8 @@ builder.Services.AddSession(options =>
 
 builder.Services.AddScoped<CatalogoRepository>();
 builder.Services.AddScoped<CatalogoService>();
+builder.Services.AddScoped<ContactosRepository>();
+builder.Services.AddScoped<ContactosService>();
 
 // Capa AccesoADatos
 builder.Services.AddSingleton<ProyectoHipodromoGrupoF.AccesoADatos.ConexionDB>();

@@ -18,6 +18,11 @@ namespace ProyectoHipodromoGrupoF.Logica
         public List<Persona> ListarPersonas() =>
             _personasRepository.ListarPersonas();
 
+        public UbicacionPersona ObtenerUbicacionPorBarrio(int idBarrio)
+        {
+            return _personasRepository.ObtenerUbicacionPorBarrio(idBarrio);
+        }
+
         public List<PersonaConRol> ListarPersonasConRol() =>
     _personasRepository.ListarPersonasConRol();
 

@@ -33,14 +33,11 @@ namespace ProyectoHipodromoGrupoF.Logica
 
         public void GenerarFacturaPorInscripcion(string codigoPropietario, string codigoEvento, string usuarioActual)
         {
-            if (_facturacionRepository.ExisteFacturaPorPropietarioEvento(codigoPropietario, codigoEvento))
-                return;
-
             var factura = new Factura
             {
                 CodigoPropietario = codigoPropietario,
                 CodigoEvento = codigoEvento,
-                Subtotal = 25000
+                Subtotal = 30000
             };
 
             InsertarFactura(factura, usuarioActual);

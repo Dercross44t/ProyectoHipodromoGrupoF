@@ -118,9 +118,16 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
         {
             try
             {
+                var inscripcionAnterior = _inscripcionesService.ListarInscripciones()
+                    .FirstOrDefault(i => i.Codigo == inscripcion.Codigo);
+
+                if (inscripcionAnterior == null)
+                    throw new Exception("No se encontró la inscripción.");
+
                 _inscripcionesService.ActualizarInscripcion(inscripcion);
 
-                if (inscripcion.IdCatEstadoInscripcion == 2) // 2 = Aprobada
+                if (inscripcionAnterior.IdCatEstadoInscripcion != 2 &&
+                    inscripcion.IdCatEstadoInscripcion == 2)
                 {
                     var inscripcionBD = _inscripcionesService.ListarInscripciones()
                         .FirstOrDefault(i => i.Codigo == inscripcion.Codigo);

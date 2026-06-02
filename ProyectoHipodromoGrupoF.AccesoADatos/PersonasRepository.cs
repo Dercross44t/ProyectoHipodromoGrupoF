@@ -49,6 +49,40 @@ namespace ProyectoHipodromoGrupoF.AccesoADatos
             return personas;
         }
 
+        public UbicacionPersona ObtenerUbicacionPorBarrio(int idBarrio)
+        {
+            using var conn = _conexionDB.ObtenerConexion();
+
+            string sql = @"
+        SELECT
+            p.id  AS id_provincia,
+            c.id  AS id_canton,
+            d.id  AS id_distrito,
+            b.id  AS id_barrio
+        FROM cat_barrio b
+        INNER JOIN cat_distrito d ON b.id_cat_distrito = d.id
+        INNER JOIN cat_canton c ON d.id_cat_canton = c.id
+        INNER JOIN cat_provincia p ON c.id_cat_provincia = p.id
+        WHERE b.id = @idBarrio";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@idBarrio", idBarrio);
+
+            using var reader = cmd.ExecuteReader();
+
+            if (reader.Read())
+            {
+                return new UbicacionPersona
+                {
+                    IdProvincia = reader.GetInt32(reader.GetOrdinal("id_provincia")),
+                    IdCanton = reader.GetInt32(reader.GetOrdinal("id_canton")),
+                    IdDistrito = reader.GetInt32(reader.GetOrdinal("id_distrito")),
+                    IdBarrio = reader.GetInt32(reader.GetOrdinal("id_barrio"))
+                };
+            }
+
+            return null;
+        }
         public List<PersonaConRol> ListarPersonasConRol()
         {
             var personas = new List<PersonaConRol>();
