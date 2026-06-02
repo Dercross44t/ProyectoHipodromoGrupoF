@@ -1,65 +1,58 @@
-@model IEnumerable<ProyectoHipodromoGrupoF.Modelo.Veterinario>
+﻿@model IEnumerable<ProyectoHipodromoGrupoF.Modelo.EncargadoEstablo>
 
 @{
-    ViewData["Title"] = "Personal Veterinario";
+    ViewData["Title"] = "Encargados de Establo";
     var personas = ViewBag.Personas as List<ProyectoHipodromoGrupoF.Modelo.Persona> ?? new();
 }
-
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <p class="text-secondary m-0">Registro de médicos veterinarios autorizados en el hipódromo.</p>
-
-    @if (User.IsInRole("2"))
-    {
-        <button class="btn btn-primary-custom" data-bs-toggle="modal" data-bs-target="#nuevoVeterinarioModal">
-            <i class="fa-solid fa-user-doctor me-2"></i> Nuevo Veterinario
-        </button>
-    }
-</div>
 
 <div class="d-flex gap-4 border-bottom border-secondary mb-4 pb-3">
     <a class="text-secondary text-decoration-none" asp-controller="Personas" asp-action="Personas">Personas</a>
     <a class="text-secondary text-decoration-none" asp-controller="Personas" asp-action="Index">Usuarios del Sistema</a>
     <a class="text-secondary text-decoration-none" asp-controller="Personas" asp-action="Propietarios">Directorio de Propietarios</a>
     <a class="text-secondary text-decoration-none" asp-controller="Personas" asp-action="Administradores">Administradores</a>
-    <a class="text-primary fw-bold text-decoration-none" asp-controller="Personas" asp-action="Veterinarios">Personal Veterinario</a>
-    <a class="text-secondary text-decoration-none" asp-controller="Personas" asp-action="Encargados">Encargados de Establo</a>
+    <a class="text-secondary text-decoration-none" asp-controller="Personas" asp-action="Veterinarios">Personal Veterinario</a>
+    <a class="text-primary fw-bold text-decoration-none" asp-controller="Personas" asp-action="Encargados">Encargados de Establo</a>
 </div>
 
-<div class="glass-panel p-4">
-    <table class="table table-glass w-100">
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <p class="text-secondary m-0">Personal encargado de la gestión de establos.</p>
+
+    @if (User.IsInRole("2"))
+    {
+        <button class="btn btn-primary-custom" data-bs-toggle="modal" data-bs-target="#nuevoEncargadoModal">
+            <i class="fa-solid fa-plus me-2"></i> Nuevo Encargado
+        </button>
+    }
+</div>
+
+<div class="glass-panel p-0 overflow-hidden">
+    <table class="table table-glass w-100 mb-0">
         <thead>
             <tr>
-                <th>Código Licencia</th>
-                <th>Número Colegiado</th>
+                <th>Código</th>
                 <th>Cédula</th>
                 <th>Nombre Completo</th>
-                <th>Especialidad</th>
                 <th class="text-end">Acciones</th>
             </tr>
         </thead>
         <tbody>
-            @foreach (var v in Model)
+            @foreach (var e in Model)
             {
-                var persona = personas.FirstOrDefault(p => p.Cedula == v.Cedula);
+                var persona = personas.FirstOrDefault(p => p.Cedula == e.Cedula);
                 var nombreCompleto = persona != null
                     ? $"{persona.Nombre1} {persona.Nombre2} {persona.Apellido1} {persona.Apellido2}".Replace("  ", " ").Trim()
                     : "Desconocido";
 
                 <tr>
-                    <td class="fw-bold">@v.Codigo</td>
-                    <td>@v.NumeroColegiado</td>
-                    <td>@v.Cedula</td>
+                    <td class="fw-bold">@e.Codigo</td>
+                    <td>@e.Cedula</td>
                     <td>@nombreCompleto</td>
-                    <td>
-                        <i class="fa-solid fa-stethoscope text-secondary me-2"></i>
-                        @v.Especialidad
-                    </td>
                     <td class="text-end">
                         @if (User.IsInRole("2"))
                         {
                             <button type="button"
                                     class="btn btn-sm btn-outline-danger border-0"
-                                    onclick="confirmarEliminarVeterinario('@v.Codigo', '@nombreCompleto')">
+                                    onclick="confirmarEliminarEncargado('@e.Codigo', '@nombreCompleto')">
                                 <i class="fa-solid fa-trash"></i>
                             </button>
                         }
@@ -70,8 +63,8 @@
             @if (!Model.Any())
             {
                 <tr>
-                    <td colspan="6" class="text-center text-secondary py-5">
-                        No hay veterinarios registrados.
+                    <td colspan="4" class="text-center text-secondary py-5">
+                        No hay encargados de establo registrados.
                     </td>
                 </tr>
             }
@@ -81,15 +74,17 @@
 
 @if (User.IsInRole("2"))
 {
-    <div class="modal fade" id="nuevoVeterinarioModal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade" id="nuevoEncargadoModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content glass-card border-0">
                 <div class="modal-header border-secondary">
-                    <h5 class="modal-title text-white">Registrar Veterinario</h5>
+                    <h5 class="modal-title text-white">
+                        <i class="fa-solid fa-user-plus me-2"></i> Registrar Encargado
+                    </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
 
-                <form asp-action="InsertarVeterinario" method="post">
+                <form asp-action="InsertarEncargado" method="post">
                     @Html.AntiForgeryToken()
 
                     <div class="modal-body">
@@ -109,29 +104,13 @@
                                 }
                             </select>
                         </div>
-
-                        <div class="mb-3">
-                            <label class="form-label text-white">Número de Colegiado *</label>
-                            <input type="text"
-                                   name="NumeroColegiado"
-                                   class="form-control form-control-glass"
-                                   maxlength="9"
-                                   required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label text-white">Especialidad *</label>
-                            <input type="text"
-                                   name="Especialidad"
-                                   class="form-control form-control-glass"
-                                   maxlength="50"
-                                   required>
-                        </div>
                     </div>
 
                     <div class="modal-footer border-secondary">
                         <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary-custom">Registrar Veterinario</button>
+                        <button type="submit" class="btn btn-primary-custom">
+                            <i class="fa-solid fa-floppy-disk me-1"></i> Registrar Encargado
+                        </button>
                     </div>
                 </form>
             </div>
@@ -139,7 +118,7 @@
     </div>
 }
 
-<div class="modal fade" id="eliminarVeterinarioModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="eliminarEncargadoModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content glass-card border-0">
             <div class="modal-header border-secondary">
@@ -151,19 +130,19 @@
             </div>
 
             <div class="modal-body">
-                <p class="text-white mb-0">¿Está seguro que desea eliminar este veterinario?</p>
+                <p class="text-white mb-0">¿Está seguro que desea eliminar este encargado de establo?</p>
                 <p class="text-secondary mt-2 mb-0">
                     Registro seleccionado:
-                    <strong class="text-white" id="veterinarioEliminarTexto"></strong>
+                    <strong class="text-white" id="encargadoEliminarTexto"></strong>
                 </p>
             </div>
 
             <div class="modal-footer border-secondary">
                 <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
 
-                <form asp-action="EliminarVeterinario" method="post">
+                <form asp-action="EliminarEncargado" method="post">
                     @Html.AntiForgeryToken()
-                    <input type="hidden" id="codigoVeterinarioEliminar" name="codigo" />
+                    <input type="hidden" id="codigoEncargadoEliminar" name="codigo" />
 
                     <button type="submit" class="btn btn-danger">
                         <i class="fa-solid fa-trash me-1"></i> Eliminar
@@ -176,11 +155,11 @@
 
 @section Scripts {
     <script>
-        function confirmarEliminarVeterinario(codigo, nombre) {
-            document.getElementById('codigoVeterinarioEliminar').value = codigo;
-            document.getElementById('veterinarioEliminarTexto').innerText = codigo + ' - ' + nombre;
+        function confirmarEliminarEncargado(codigo, nombre) {
+            document.getElementById('codigoEncargadoEliminar').value = codigo;
+            document.getElementById('encargadoEliminarTexto').innerText = codigo + ' - ' + nombre;
 
-            const modal = new bootstrap.Modal(document.getElementById('eliminarVeterinarioModal'));
+            const modal = new bootstrap.Modal(document.getElementById('eliminarEncargadoModal'));
             modal.show();
         }
     </script>

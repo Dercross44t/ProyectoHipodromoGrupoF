@@ -10,10 +10,10 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
     [Authorize(Roles = "1,2,3,4")]
     public class EquinosController : Controller
     {
-        private readonly EquinosService     _equinosService;
+        private readonly EquinosService _equinosService;
         private readonly VeterinarioService _veterinarioService;
-        private readonly PersonasService    _personasService;
-        private readonly CatalogosService   _catalogosService;
+        private readonly PersonasService _personasService;
+        private readonly CatalogosService _catalogosService;
 
         public EquinosController(
             EquinosService equinosService,
@@ -21,22 +21,22 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
             PersonasService personasService,
             CatalogosService catalogosService)
         {
-            _equinosService     = equinosService;
+            _equinosService = equinosService;
             _veterinarioService = veterinarioService;
-            _personasService    = personasService;
-            _catalogosService   = catalogosService;
+            _personasService = personasService;
+            _catalogosService = catalogosService;
         }
 
         // ─── HELPER: cargar catálogos en ViewBag ──────────────────────────────────
 
         private void CargarCatalogosCaballo()
         {
-            ViewBag.Sexos      = _catalogosService.ListarSexos();
-            ViewBag.Razas      = _catalogosService.ListarRazas();
-            ViewBag.Estados    = _catalogosService.ListarEstadosCaballo();
+            ViewBag.Sexos = _catalogosService.ListarSexos();
+            ViewBag.Razas = _catalogosService.ListarRazas();
+            ViewBag.Estados = _catalogosService.ListarEstadosCaballo();
             ViewBag.Propietarios = _personasService.ListarPropietarios();
-            ViewBag.PersonasMap  = _personasService.ListarPersonas(); // Para mapear cédula a nombre
-            ViewBag.Establos   = _equinosService.ListarEstablos();
+            ViewBag.PersonasMap = _personasService.ListarPersonas(); // Para mapear cédula a nombre
+            ViewBag.Establos = _equinosService.ListarEstablos();
             // Propietario actual (para rol 1)
             ViewBag.CodigoPropietarioActual = User.FindFirst("CodigoPropietario")?.Value ?? string.Empty;
         }
@@ -65,14 +65,22 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
         {
             try
             {
-                // Rol 1 solo puede registrar con su propio código
-                if (User.IsInRole("1"))
-                    caballo.CodigoPropietario = User.FindFirst("CodigoPropietario")?.Value ?? caballo.CodigoPropietario;
+                caballo.CodigoPropietario = User.FindFirst("CodigoPropietario")?.Value ?? caballo.CodigoPropietario;
+
+                caballo.CodigoEstablo = null;
+                caballo.IdCatEstadoCaballo = null;
+
                 var usuarioActual = User.Identity?.Name ?? "usuario_desconocido";
+
                 _equinosService.InsertarCaballo(caballo, usuarioActual);
-                TempData["Exito"] = $"Caballo \"{caballo.Nombre}\" registrado correctamente.";
+
+                TempData["Exito"] = $"Caballo \"{caballo.Nombre}\" registrado correctamente. Queda pendiente de asignación de establo y revisión veterinaria.";
             }
-            catch (Exception ex) { TempData["Error"] = $"Error: {ex.Message}"; }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error: {ex.Message}";
+            }
+
             return RedirectToAction("Index");
         }
 
@@ -84,15 +92,26 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
             {
                 if (User.IsInRole("1"))
                     caballo.CodigoPropietario = User.FindFirst("CodigoPropietario")?.Value ?? caballo.CodigoPropietario;
-                
+
                 var existente = _equinosService.ListarCaballos().Find(c => c.Codigo == caballo.Codigo);
+
                 if (existente != null)
+                {
+                    caballo.CodigoEstablo = existente.CodigoEstablo;
                     caballo.IdCatEstadoCaballo = existente.IdCatEstadoCaballo;
+                }
+
                 var usuarioActual = User.Identity?.Name ?? "usuario_desconocido";
+
                 _equinosService.ActualizarCaballo(caballo, usuarioActual);
+
                 TempData["Exito"] = "Caballo actualizado correctamente.";
             }
-            catch (Exception ex) { TempData["Error"] = $"Error: {ex.Message}"; }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error: {ex.Message}";
+            }
+
             return RedirectToAction("Index");
         }
 
@@ -128,9 +147,10 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
         public IActionResult Establos()
         {
             ViewBag.EstadosEstablo = _catalogosService.ListarEstadosEstablo();
-            ViewBag.Provincias     = _catalogosService.ListarProvincias();
-            ViewBag.PersonasMap    = _personasService.ListarPersonas();
-            ViewBag.Encargados     = _personasService.ListarEncargados();
+            ViewBag.Provincias = _catalogosService.ListarProvincias();
+            ViewBag.PersonasMap = _personasService.ListarPersonas();
+            ViewBag.Encargados = _personasService.ListarEncargados();
+            ViewBag.Caballos = _equinosService.ListarCaballos();
             return View(_equinosService.ListarEstablos());
         }
 
@@ -161,20 +181,126 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
             return RedirectToAction("Establos");
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "2,3")]
+        public IActionResult AsignarCaballoEstablo(string codigoCaballo, string codigoEstablo)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(codigoCaballo) || string.IsNullOrWhiteSpace(codigoEstablo))
+                {
+                    TempData["Error"] = "Debe seleccionar un caballo y un establo.";
+                    return RedirectToAction("Establos");
+                }
+
+                var establo = _equinosService.ListarEstablos()
+                    .FirstOrDefault(e => e.Codigo == codigoEstablo);
+
+                if (establo == null)
+                {
+                    TempData["Error"] = "El establo seleccionado no existe.";
+                    return RedirectToAction("Establos");
+                }
+
+                if (establo.IdCatEstadoEstablo == 3) // 3 = Mantenimiento
+                {
+                    TempData["Error"] = "No se pueden asignar caballos a un establo en mantenimiento.";
+                    return RedirectToAction("Establos");
+                }
+
+                var caballosAsignados = _equinosService.ListarCaballos()
+                    .Count(c => c.CodigoEstablo == codigoEstablo);
+
+                if (caballosAsignados >= establo.Capacidad)
+                {
+                    TempData["Error"] = "No se pueden asignar más caballos porque el establo está lleno.";
+                    return RedirectToAction("Establos");
+                }
+
+                var usuarioActual = User.Identity?.Name ?? "usuario_desconocido";
+
+                _equinosService.AsignarCaballoEstablo(codigoCaballo, codigoEstablo, usuarioActual);
+
+                TempData["Exito"] = "Caballo asignado al establo correctamente.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error: {ex.Message}";
+            }
+
+            return RedirectToAction("Establos");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "2,3")]
+        public IActionResult CambiarEstadoEstablo(string codigoEstablo, int idCatEstadoEstablo)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(codigoEstablo))
+                {
+                    TempData["Error"] = "Debe seleccionar un establo.";
+                    return RedirectToAction("Establos");
+                }
+
+                var usuarioActual = User.Identity?.Name ?? "usuario_desconocido";
+
+                _equinosService.CambiarEstadoEstablo(codigoEstablo, idCatEstadoEstablo, usuarioActual);
+
+                TempData["Exito"] = "Estado del establo actualizado.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error: {ex.Message}";
+            }
+
+            return RedirectToAction("Establos");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "2,3")]
+        public IActionResult QuitarCaballoEstablo(string codigoCaballo)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(codigoCaballo))
+                {
+                    TempData["Error"] = "Debe seleccionar un caballo.";
+                    return RedirectToAction("Establos");
+                }
+
+                var usuarioActual = User.Identity?.Name ?? "usuario_desconocido";
+
+                _equinosService.QuitarCaballoEstablo(codigoCaballo, usuarioActual);
+
+                TempData["Exito"] = "Caballo removido del establo correctamente.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error: {ex.Message}";
+            }
+
+            return RedirectToAction("Establos");
+        }
+
         // ─── HISTORIAL VETERINARIO ───────────────────────────────────────────────
 
         [Authorize(Roles = "4")]
         public IActionResult HistorialVeterinario()
         {
-            ViewBag.Caballos      = _equinosService.ListarCaballos();
-            ViewBag.Veterinarios  = _veterinarioService.ListarVeterinarios();
+            ViewBag.Caballos = _equinosService.ListarCaballos();
+            ViewBag.Veterinarios = _veterinarioService.ListarVeterinarios();
+            ViewBag.EstadosCaballo = _catalogosService.ListarEstadosCaballo();
             ViewBag.FechaMinimaVencimiento = DateTime.Today.AddMonths(6).ToString("yyyy-MM-dd");
             return View(_veterinarioService.ListarHistorialVeterinario());
         }
 
         [HttpPost][ValidateAntiForgeryToken]
         [Authorize(Roles = "4")]
-        public IActionResult InsertarHistorial(HistorialVeterinario historial)
+        public IActionResult InsertarHistorial(HistorialVeterinario historial, int idCatEstadoCaballo)
         {
             try
             {
@@ -196,7 +322,13 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
 
                 _veterinarioService.InsertarHistorial(historial, usuarioActual);
 
-                TempData["Exito"] = "Registro veterinario guardado correctamente.";
+                _equinosService.ActualizarEstadoCaballo(
+                    historial.CodigoCaballo,
+                    idCatEstadoCaballo,
+                    usuarioActual
+                );
+
+                TempData["Exito"] = "Registro veterinario guardado correctamente y estado del caballo actualizado.";
             }
             catch (Exception ex)
             {

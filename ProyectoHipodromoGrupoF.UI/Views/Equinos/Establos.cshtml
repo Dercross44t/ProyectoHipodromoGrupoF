@@ -1,14 +1,18 @@
 @model IEnumerable<ProyectoHipodromoGrupoF.Modelo.Establo>
+
 @{
     ViewData["Title"] = "Gestión de Establos";
+
     var personasMap = ViewBag.PersonasMap as List<ProyectoHipodromoGrupoF.Modelo.Persona> ?? new();
     var encargados = ViewBag.Encargados as List<ProyectoHipodromoGrupoF.Modelo.EncargadoEstablo> ?? new();
+    var provincias = ViewBag.Provincias as List<ProyectoHipodromoGrupoF.Modelo.CatProvincia> ?? new();
+    var caballos = ViewBag.Caballos as List<ProyectoHipodromoGrupoF.Modelo.Caballo> ?? new();
 }
-
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <p class="text-secondary m-0">Administración de establos y su capacidad máxima.</p>
-    @if(User.IsInRole("2") || User.IsInRole("3"))
+
+    @if (User.IsInRole("2") || User.IsInRole("3"))
     {
         <button class="btn btn-primary-custom" data-bs-toggle="modal" data-bs-target="#nuevoEstabloModal">
             <i class="fa-solid fa-plus me-2"></i> Registrar Establo
@@ -16,7 +20,6 @@
     }
 </div>
 
-<!-- Nav Tabs -->
 <div class="d-flex gap-4 border-bottom border-secondary mb-4 pb-3">
     <a class="@(ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "text-primary fw-bold" : "text-secondary") text-decoration-none"
        asp-controller="Equinos" asp-action="Index">
@@ -37,106 +40,469 @@
 <div class="row">
     @foreach (var item in Model)
     {
+        var caballosDelEstablo = caballos.Where(c => c.CodigoEstablo == item.Codigo).ToList();
+        var caballosSinEstablo = caballos.Where(c => string.IsNullOrWhiteSpace(c.CodigoEstablo)).ToList();
+        var ocupados = caballosDelEstablo.Count;
+        var disponibles = item.Capacidad - ocupados;
+
         <div class="col-md-4 mb-4">
             <div class="glass-card p-4 h-100 position-relative overflow-hidden">
                 <div class="position-absolute top-0 end-0 p-3">
-                    @if(item.IdCatEstadoEstablo == 1) { <span class="badge badge-active shadow-sm">Disponible</span> }
-                    else if (item.IdCatEstadoEstablo == 2) { <span class="badge badge-warning shadow-sm">Lleno</span> }
-                    else { <span class="badge badge-inactive shadow-sm">Mantenimiento</span> }
+                    @if (item.IdCatEstadoEstablo == 1)
+                    {
+                        <span class="badge badge-active shadow-sm">Disponible</span>
+                    }
+                    else if (item.IdCatEstadoEstablo == 2)
+                    {
+                        <span class="badge badge-warning shadow-sm">Lleno</span>
+                    }
+                    else
+                    {
+                        <span class="badge badge-inactive shadow-sm">Mantenimiento</span>
+                    }
                 </div>
+
                 <div class="d-flex align-items-center mb-3">
-                    <div class="rounded-circle bg-secondary d-flex justify-content-center align-items-center text-white me-3" style="width:50px;height:50px;font-size:1.5rem;">
+                    <div class="rounded-circle bg-secondary d-flex justify-content-center align-items-center text-white me-3"
+                         style="width:50px;height:50px;font-size:1.5rem;">
                         <i class="fa-solid fa-house-chimney"></i>
                     </div>
+
                     <div>
                         <h5 class="text-white m-0 fw-bold">@item.Nombre</h5>
                         <small class="text-secondary">Código: @item.Codigo | Barrio ID: @item.IdCatBarrio</small>
                     </div>
                 </div>
+
                 <hr class="border-secondary opacity-25">
+
                 <div class="d-flex justify-content-between mb-2">
-                    <span class="text-secondary"><i class="fa-solid fa-user-tie me-1"></i> Encargado:</span>
+                    <span class="text-secondary">
+                        <i class="fa-solid fa-user-tie me-1"></i> Encargado:
+                    </span>
+
                     @{
                         var encargado = encargados.FirstOrDefault(e => e.Codigo == item.CodigoEncargadoEstablo);
                         var pers = encargado != null ? personasMap.FirstOrDefault(p => p.Cedula == encargado.Cedula) : null;
                         var nombreEnc = pers != null ? $"{pers.Nombre1} {pers.Apellido1}" : (item.CodigoEncargadoEstablo ?? "Sin asignar");
                     }
+
                     <span class="text-white text-end">@nombreEnc</span>
                 </div>
+
                 <div class="d-flex justify-content-between mb-2">
-                    <span class="text-secondary"><i class="fa-solid fa-boxes-stacked me-1"></i> Capacidad:</span>
+                    <span class="text-secondary">
+                        <i class="fa-solid fa-boxes-stacked me-1"></i> Capacidad:
+                    </span>
                     <span class="text-white fw-bold">@item.Capacidad equinos</span>
                 </div>
-                <div class="mt-4 text-end">
-                    @if(User.IsInRole("2"))
+
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-secondary">
+                        <i class="fa-solid fa-horse me-1"></i> Ocupados:
+                    </span>
+                    <span class="text-white fw-bold">@ocupados</span>
+                </div>
+
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-secondary">
+                        <i class="fa-solid fa-door-open me-1"></i> Disponibles:
+                    </span>
+                    <span class="text-white fw-bold">@disponibles</span>
+                </div>
+
+                <div class="mt-4 d-flex gap-2 justify-content-end flex-wrap">
+                    @if (User.IsInRole("2") || User.IsInRole("3"))
+                    {
+                        <button type="button"
+                                class="btn btn-sm btn-primary-custom"
+                                data-bs-toggle="modal"
+                                data-bs-target="#asignarCaballoModal_@item.Codigo"
+                            @(item.IdCatEstadoEstablo == 3 || disponibles <= 0 ? "disabled" : "")>
+                            <i class="fa-solid fa-plus me-1"></i> Agregar caballo
+                        </button>
+
+                        <button type="button"
+                                class="btn btn-sm btn-secondary-custom"
+                                data-bs-toggle="modal"
+                                data-bs-target="#quitarCaballoModal_@item.Codigo">
+                            <i class="fa-solid fa-minus me-1"></i> Quitar caballo
+                        </button>
+
+                        <button type="button"
+                                class="btn btn-sm btn-outline-warning"
+                                data-bs-toggle="modal"
+                                data-bs-target="#cambiarEstadoEstabloModal_@item.Codigo">
+                            <i class="fa-solid fa-gear me-1"></i> Estado
+                        </button>
+                    }
+
+                    @if (User.IsInRole("2"))
                     {
                         <form asp-action="EliminarEstablo" method="post" style="display:inline;"
                               onsubmit="return confirm('¿Eliminar el establo @item.Codigo?')">
                             @Html.AntiForgeryToken()
                             <input type="hidden" name="codigo" value="@item.Codigo" />
+
                             <button type="submit" class="btn btn-sm btn-outline-danger border-0">
-                                <i class="fa-solid fa-trash"></i> Eliminar
+                                <i class="fa-solid fa-trash me-1"></i> Eliminar
                             </button>
                         </form>
                     }
                 </div>
             </div>
         </div>
+
+        <div class="modal fade" id="asignarCaballoModal_@item.Codigo" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content glass-card border-0">
+                    <div class="modal-header border-secondary">
+                        <h5 class="modal-title text-white">
+                            <i class="fa-solid fa-horse me-2"></i> Agregar caballo a @item.Nombre
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <form asp-action="AsignarCaballoEstablo" method="post">
+                        @Html.AntiForgeryToken()
+
+                        <div class="modal-body">
+                            <input type="hidden" name="codigoEstablo" value="@item.Codigo" />
+
+                            <label class="form-label text-white">Caballo sin establo *</label>
+                            <select name="codigoCaballo" class="form-control form-control-glass" required>
+                                <option value="">— Seleccione —</option>
+
+                                @foreach (var c in caballosSinEstablo)
+                                {
+                                    <option value="@c.Codigo">@c.Nombre (@c.Codigo)</option>
+                                }
+                            </select>
+
+                            <p class="text-secondary mt-3 mb-0">
+                                Espacios disponibles:
+                                <strong class="text-white">@disponibles</strong>
+                            </p>
+
+                            @if (item.IdCatEstadoEstablo == 3)
+                            {
+                                <div class="alert alert-warning mt-3 mb-0">
+                                    Este establo está en mantenimiento. No se pueden asignar caballos.
+                                </div>
+                            }
+                            else if (disponibles <= 0)
+                            {
+                                <div class="alert alert-warning mt-3 mb-0">
+                                    Este establo no tiene espacios disponibles.
+                                </div>
+                            }
+                        </div>
+
+                        <div class="modal-footer border-secondary">
+                            <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">
+                                Cancelar
+                            </button>
+
+                            <button type="submit"
+                                    class="btn btn-primary-custom"
+                                @(item.IdCatEstadoEstablo == 3 || disponibles <= 0 ? "disabled" : "")>
+                                <i class="fa-solid fa-save me-1"></i> Asignar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="quitarCaballoModal_@item.Codigo" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content glass-card border-0">
+                    <div class="modal-header border-secondary">
+                        <h5 class="modal-title text-white">
+                            <i class="fa-solid fa-horse me-2"></i> Quitar caballo de @item.Nombre
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <form asp-action="QuitarCaballoEstablo" method="post">
+                        @Html.AntiForgeryToken()
+
+                        <div class="modal-body">
+                            <label class="form-label text-white">Caballo asignado *</label>
+                            <select name="codigoCaballo" class="form-control form-control-glass" required>
+                                <option value="">— Seleccione —</option>
+
+                                @foreach (var c in caballosDelEstablo)
+                                {
+                                    <option value="@c.Codigo">@c.Nombre (@c.Codigo)</option>
+                                }
+                            </select>
+
+                            @if (!caballosDelEstablo.Any())
+                            {
+                                <div class="alert alert-info mt-3 mb-0">
+                                    Este establo no tiene caballos asignados.
+                                </div>
+                            }
+                        </div>
+
+                        <div class="modal-footer border-secondary">
+                            <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">
+                                Cancelar
+                            </button>
+
+                            <button type="submit" class="btn btn-danger" @(!caballosDelEstablo.Any() ? "disabled" : "")>
+                                <i class="fa-solid fa-minus me-1"></i> Quitar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="cambiarEstadoEstabloModal_@item.Codigo" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content glass-card border-0">
+                    <div class="modal-header border-secondary">
+                        <h5 class="modal-title text-white">
+                            <i class="fa-solid fa-gear me-2"></i> Cambiar estado de @item.Nombre
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <form asp-action="CambiarEstadoEstablo" method="post">
+                        @Html.AntiForgeryToken()
+
+                        <div class="modal-body">
+                            <input type="hidden" name="codigoEstablo" value="@item.Codigo" />
+
+                            <label class="form-label text-white">Estado *</label>
+                            <select name="idCatEstadoEstablo" class="form-control form-control-glass" required>
+                                <option value="1" selected="@(item.IdCatEstadoEstablo == 1)">Disponible</option>
+                                <option value="2" selected="@(item.IdCatEstadoEstablo == 2)">Lleno</option>
+                                <option value="3" selected="@(item.IdCatEstadoEstablo == 3)">Mantenimiento</option>
+                            </select>
+
+                            <div class="alert alert-info mt-3 mb-0">
+                                Si selecciona Disponible o Lleno, el sistema recalculará el estado según la capacidad y ocupación.
+                                Si selecciona Mantenimiento, se mantendrá manualmente hasta cambiarlo.
+                            </div>
+                        </div>
+
+                        <div class="modal-footer border-secondary">
+                            <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">
+                                Cancelar
+                            </button>
+
+                            <button type="submit" class="btn btn-primary-custom">
+                                <i class="fa-solid fa-save me-1"></i> Guardar Estado
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     }
 </div>
 
-<!-- Modal Registrar Establo -->
-@if(User.IsInRole("2") || User.IsInRole("3"))
+@if (User.IsInRole("2") || User.IsInRole("3"))
 {
-<div class="modal fade" id="nuevoEstabloModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content glass-card border-0">
-      <div class="modal-header border-secondary">
-        <h5 class="modal-title text-white"><i class="fa-solid fa-house-chimney text-primary me-2"></i>Registrar Establo</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <form asp-action="InsertarEstablo" method="post">
-        @Html.AntiForgeryToken()
-        <div class="modal-body">
-          <div class="mb-3">
-            <label class="form-label text-white">Nombre del Establo *</label>
-            <input type="text" name="Nombre" class="form-control form-control-glass" required maxlength="100" placeholder="Ej. Hacienda Las Flores">
-          </div>
-          <div class="mb-3">
-            <label class="form-label text-white">Barrio (ID Categoría) *</label>
-            <input type="number" name="IdCatBarrio" class="form-control form-control-glass" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label text-white">Capacidad Máxima</label>
-            <input type="number" name="Capacidad" class="form-control form-control-glass" required min="1">
-          </div>
-          <div class="mb-3">
-            <label class="form-label text-white">Estado</label>
-            <select name="IdCatEstadoEstablo" class="form-control form-control-glass" required>
-                <option value="1">Disponible</option>
-                <option value="2">Lleno</option>
-                <option value="3">Mantenimiento</option>
-            </select>
-          </div>
-          <div class="mb-3">
-            <label class="form-label text-white">Encargado *</label>
-            <select name="CodigoEncargadoEstablo" class="form-control form-control-glass" required>
-                <option value="">— Seleccione Encargado —</option>
-                @foreach (var e in encargados)
-                {
-                    var p = personasMap.FirstOrDefault(pm => pm.Cedula == e.Cedula);
-                    var n = p != null ? $"{p.Nombre1} {p.Apellido1}" : e.Codigo;
-                    <option value="@e.Codigo">@e.Codigo - @n</option>
-                }
-            </select>
-          </div>
+    <div class="modal fade" id="nuevoEstabloModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content glass-card border-0">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title text-white">
+                        <i class="fa-solid fa-house-chimney text-primary me-2"></i> Registrar Establo
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+
+                <form asp-action="InsertarEstablo" method="post">
+                    @Html.AntiForgeryToken()
+
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label text-white">Nombre del Establo *</label>
+                            <input type="text"
+                                   name="Nombre"
+                                   class="form-control form-control-glass"
+                                   required
+                                   maxlength="100"
+                                   placeholder="Ej. Hacienda Las Flores">
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label text-white">Provincia *</label>
+                                <select class="form-control form-control-glass"
+                                        id="selectProvinciaEstablo"
+                                        onchange="cargarCantonesEstablo(this.value)">
+                                    <option value="">— Seleccione —</option>
+                                    @foreach (var pr in provincias)
+                                    {
+                                        <option value="@pr.Id">@pr.Nombre</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label text-white">Cantón *</label>
+                                <select class="form-control form-control-glass"
+                                        id="selectCantonEstablo"
+                                        disabled
+                                        onchange="cargarDistritosEstablo(this.value)">
+                                    <option value="">— Seleccione provincia —</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label text-white">Distrito *</label>
+                                <select class="form-control form-control-glass"
+                                        id="selectDistritoEstablo"
+                                        disabled
+                                        onchange="cargarBarriosEstablo(this.value)">
+                                    <option value="">— Seleccione cantón —</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label text-white">Barrio *</label>
+                                <select name="IdCatBarrio"
+                                        class="form-control form-control-glass"
+                                        id="selectBarrioEstablo"
+                                        required
+                                        disabled>
+                                    <option value="">— Seleccione distrito —</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3 mt-3">
+                            <label class="form-label text-white">Capacidad Máxima</label>
+                            <input type="number"
+                                   name="Capacidad"
+                                   class="form-control form-control-glass"
+                                   required
+                                   min="1">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-white">Estado</label>
+                            <select name="IdCatEstadoEstablo" class="form-control form-control-glass" required>
+                                <option value="1">Disponible</option>
+                                <option value="2">Lleno</option>
+                                <option value="3">Mantenimiento</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-white">Encargado *</label>
+                            <select name="CodigoEncargadoEstablo" class="form-control form-control-glass" required>
+                                <option value="">— Seleccione Encargado —</option>
+
+                                @foreach (var e in encargados)
+                                {
+                                    var p = personasMap.FirstOrDefault(pm => pm.Cedula == e.Cedula);
+                                    var n = p != null ? $"{p.Nombre1} {p.Apellido1}" : e.Codigo;
+
+                                    <option value="@e.Codigo">@e.Codigo - @n</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer border-secondary">
+                        <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+
+                        <button type="submit" class="btn btn-primary-custom">
+                            <i class="fa-solid fa-save me-1"></i> Registrar Establo
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
-        <div class="modal-footer border-secondary">
-          <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary-custom"><i class="fa-solid fa-save me-1"></i>Registrar Establo</button>
-        </div>
-      </form>
     </div>
-  </div>
-</div>
+}
+
+@section Scripts {
+    <script>
+        async function cargarCantonesEstablo(idProvincia) {
+            const canton = document.getElementById('selectCantonEstablo');
+            const distrito = document.getElementById('selectDistritoEstablo');
+            const barrio = document.getElementById('selectBarrioEstablo');
+
+            canton.disabled = true;
+            distrito.disabled = true;
+            barrio.disabled = true;
+
+            canton.innerHTML = '<option value="">Cargando...</option>';
+            distrito.innerHTML = '<option value="">— Seleccione cantón —</option>';
+            barrio.innerHTML = '<option value="">— Seleccione distrito —</option>';
+
+            if (!idProvincia) {
+                canton.innerHTML = '<option value="">— Seleccione provincia —</option>';
+                return;
+            }
+
+            const data = await fetch(`/Personas/GetCantones?idProvincia=${idProvincia}`).then(r => r.json());
+
+            canton.innerHTML = '<option value="">— Seleccione —</option>';
+
+            data.forEach(c => {
+                canton.innerHTML += `<option value="${c.id}">${c.nombre}</option>`;
+            });
+
+            canton.disabled = false;
+        }
+
+        async function cargarDistritosEstablo(idCanton) {
+            const distrito = document.getElementById('selectDistritoEstablo');
+            const barrio = document.getElementById('selectBarrioEstablo');
+
+            distrito.disabled = true;
+            barrio.disabled = true;
+
+            distrito.innerHTML = '<option value="">Cargando...</option>';
+            barrio.innerHTML = '<option value="">— Seleccione distrito —</option>';
+
+            if (!idCanton) {
+                distrito.innerHTML = '<option value="">— Seleccione cantón —</option>';
+                return;
+            }
+
+            const data = await fetch(`/Personas/GetDistritos?idCanton=${idCanton}`).then(r => r.json());
+
+            distrito.innerHTML = '<option value="">— Seleccione —</option>';
+
+            data.forEach(d => {
+                distrito.innerHTML += `<option value="${d.id}">${d.nombre}</option>`;
+            });
+
+            distrito.disabled = false;
+        }
+
+        async function cargarBarriosEstablo(idDistrito) {
+            const barrio = document.getElementById('selectBarrioEstablo');
+
+            barrio.disabled = true;
+            barrio.innerHTML = '<option value="">Cargando...</option>';
+
+            if (!idDistrito) {
+                barrio.innerHTML = '<option value="">— Seleccione distrito —</option>';
+                return;
+            }
+
+            const data = await fetch(`/Personas/GetBarrios?idDistrito=${idDistrito}`).then(r => r.json());
+
+            barrio.innerHTML = '<option value="">— Seleccione —</option>';
+
+            data.forEach(b => {
+                barrio.innerHTML += `<option value="${b.id}">${b.nombre}</option>`;
+            });
+
+            barrio.disabled = false;
+        }
+    </script>
 }

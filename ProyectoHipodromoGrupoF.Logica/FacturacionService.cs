@@ -31,14 +31,20 @@ namespace ProyectoHipodromoGrupoF.Logica
         public List<HistorialTransaccion> ListarTransacciones() =>
             _facturacionRepository.ListarTransacciones();
 
-        /// <summary>
-        /// Genera una factura aplicando la lógica de negocio completa:
-        /// 1. Verifica si el propietario tiene descuento activo (10%).
-        /// 2. Calcula IVA 13% (legislación CR).
-        /// 3. Inserta la factura.
-        /// 4. Reinicia el flag de descuento si fue usado.
-        /// 5. Evalúa si el propietario supera ₡500k en 6 meses para activar próximo descuento.
-        /// </summary>
+        public void GenerarFacturaPorInscripcion(string codigoPropietario, string codigoEvento, string usuarioActual)
+        {
+            if (_facturacionRepository.ExisteFacturaPorPropietarioEvento(codigoPropietario, codigoEvento))
+                return;
+
+            var factura = new Factura
+            {
+                CodigoPropietario = codigoPropietario,
+                CodigoEvento = codigoEvento,
+                Subtotal = 25000
+            };
+
+            InsertarFactura(factura, usuarioActual);
+        }
         public void InsertarFactura(Factura factura, string usuarioActual)
         {
             var propietario = _personasRepository.ObtenerPropietario(factura.CodigoPropietario);
@@ -50,7 +56,7 @@ namespace ProyectoHipodromoGrupoF.Logica
             double montoNeto  = factura.Subtotal - factura.Descuento;
             factura.Impuestos = Math.Round(montoNeto * TasaIVA, 2);
             factura.Total     = Math.Round(montoNeto + factura.Impuestos, 2);
-            factura.IdCatEstadoPago = 2; // Pendiente
+            factura.IdCatEstadoPago = 1; // Pendiente
 
             _facturacionRepository.InsertarFactura(factura, usuarioActual);
 
@@ -67,6 +73,56 @@ namespace ProyectoHipodromoGrupoF.Logica
 
         public void EliminarFactura(string codigo, string usuarioActual) =>
             _facturacionRepository.EliminarFactura(codigo, usuarioActual);
+
+        public void PagarFactura(string codigoFactura, double montoPagado, int idCatMetodoPago, string usuarioActual)
+        {
+            var factura = _facturacionRepository.ObtenerFacturaPorCodigo(codigoFactura);
+
+            if (factura == null)
+                throw new Exception("No se encontró la factura.");
+
+            if (factura.IdCatEstadoPago != 1)
+                throw new Exception("Solo se pueden pagar facturas pendientes.");
+
+            if (montoPagado <= 0)
+                throw new Exception("El monto pagado debe ser mayor a cero.");
+
+            if (montoPagado > factura.Total)
+                throw new Exception("El monto pagado no puede ser mayor al total de la factura.");
+
+            _facturacionRepository.InsertarTransaccion(new HistorialTransaccion
+            {
+                CodigoFactura = factura.Codigo,
+                Fecha = DateTime.Today,
+                Monto = montoPagado,
+                IdCatMetodoPago = idCatMetodoPago
+            });
+
+            if (montoPagado == factura.Total)
+            {
+                factura.IdCatEstadoPago = 2; // Pagado
+                _facturacionRepository.ActualizarFactura(factura, usuarioActual);
+                return;
+            }
+
+            factura.IdCatEstadoPago = 5; // Parcial
+            _facturacionRepository.ActualizarFactura(factura, usuarioActual);
+
+            double montoPendiente = factura.Total - montoPagado;
+
+            var nuevaFactura = new Factura
+            {
+                CodigoPropietario = factura.CodigoPropietario,
+                CodigoEvento = factura.CodigoEvento,
+                Subtotal = montoPendiente,
+                Descuento = 0,
+                Impuestos = 0,
+                Total = montoPendiente,
+                IdCatEstadoPago = 1 // Pendiente
+            };
+
+            _facturacionRepository.InsertarFactura(nuevaFactura, usuarioActual);
+        }
 
         // ─── TRANSACCIONES ────────────────────────────────────────────────────────
 

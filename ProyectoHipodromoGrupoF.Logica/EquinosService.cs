@@ -19,6 +19,14 @@ namespace ProyectoHipodromoGrupoF.Logica
         public List<Caballo> ListarCaballosPorPropietario(string codigoPropietario) =>
             _equinosRepository.ListarCaballosPorPropietario(codigoPropietario);
 
+        public void AsignarCaballoEstablo(string codigoCaballo, string codigoEstablo, string usuarioActual) =>
+    _equinosRepository.AsignarCaballoEstablo(codigoCaballo, codigoEstablo, usuarioActual);
+
+        public void QuitarCaballoEstablo(string codigoCaballo, string usuarioActual) =>
+            _equinosRepository.QuitarCaballoEstablo(codigoCaballo, usuarioActual);
+        public void CambiarEstadoEstablo(string codigoEstablo, int idCatEstadoEstablo, string usuarioActual) =>
+    _equinosRepository.CambiarEstadoEstablo(codigoEstablo, idCatEstadoEstablo, usuarioActual);
+
         public void InsertarCaballo(Caballo caballo, string usuarioActual) =>
             _equinosRepository.InsertarCaballo(caballo, usuarioActual);
 
@@ -39,5 +47,8 @@ namespace ProyectoHipodromoGrupoF.Logica
 
         public void EliminarEstablo(string codigo) =>
             _equinosRepository.EliminarEstablo(codigo);
+
+        public void ActualizarEstadoCaballo(string codigoCaballo, int idCatEstadoCaballo, string usuarioActual) =>
+    _equinosRepository.ActualizarEstadoCaballo(codigoCaballo, idCatEstadoCaballo, usuarioActual);
     }
 }

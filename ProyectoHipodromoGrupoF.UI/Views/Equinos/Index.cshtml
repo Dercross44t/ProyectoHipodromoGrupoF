@@ -75,17 +75,30 @@
                         }
                         <span class="text-secondary">@nombrePropietario</span>
                     </td>
+
                     <td>
                         @{
                             var est = establos.FirstOrDefault(e => e.Codigo == c.CodigoEstablo);
-                            var nombreEstablo = est != null && !string.IsNullOrEmpty(est.Nombre) ? est.Nombre : c.CodigoEstablo;
+                            var nombreEstablo = est != null && !string.IsNullOrEmpty(est.Nombre)
+                                ? est.Nombre
+                                : string.IsNullOrWhiteSpace(c.CodigoEstablo)
+                                    ? "Pendiente asignación"
+                                    : c.CodigoEstablo;
                         }
-                        <span class="text-secondary">@nombreEstablo</span>
+                        <span class="badge bg-secondary">@nombreEstablo</span>
                     </td>
+
                     <td>
                         @{
-                            var estadoNombre = estados.FirstOrDefault(e => e.Id == c.IdCatEstadoCaballo)?.Nombre ?? "—";
-                            var badgeCls = c.IdCatEstadoCaballo == 1 ? "badge-active" : c.IdCatEstadoCaballo == 2 ? "bg-warning text-dark" : "bg-secondary";
+                            var estadoNombre = c.IdCatEstadoCaballo.HasValue
+                                ? estados.FirstOrDefault(e => e.Id == c.IdCatEstadoCaballo.Value)?.Nombre ?? "Sin estado"
+                                : "Pendiente revisión";
+
+                            var badgeCls = c.IdCatEstadoCaballo == 1
+                                ? "badge-active"
+                                : c.IdCatEstadoCaballo == 2
+                                    ? "bg-warning text-dark"
+                                    : "bg-secondary";
                         }
                         <span class="badge @badgeCls">@estadoNombre</span>
                     </td>
@@ -159,12 +172,12 @@
                     <label class="form-label text-white">Peso (kg) *</label>
                     <input type="text" name="Peso" class="form-control form-control-glass" required pattern="^\d*([.,]\d+)?$" inputmode="decimal" oninput="this.value = this.value.replace('.', ',');" id="inputPesoCaballo">
                 </div>
-                <div class="col-md-4" style="display:none;">
-                    <label class="form-label text-white">Estado *</label>
-                    <select name="IdCatEstadoCaballo" class="form-control form-control-glass" id="selectEstadoCaballo">
-                        <option value="1" selected>Sano/Activo</option>
-                    </select>
-                </div>
+                        <div class="col-12">
+                            <div class="alert alert-info mb-0">
+                                El establo será asignado posteriormente por el administrador o encargado de establo.
+                                El estado del caballo será definido por el veterinario.
+                            </div>
+                        </div>
                 @if (esPropietario)
                 {
                     <input type="hidden" name="CodigoPropietario" value="@codigoPropio" />
@@ -184,13 +197,6 @@
                         </select>
                     </div>
                 }
-                <div class="col-md-4">
-                    <label class="form-label text-white">Establo *</label>
-                    <select name="CodigoEstablo" class="form-control form-control-glass" required id="selectEstabloCaballo">
-                        <option value="">— Seleccione —</option>
-                        @foreach (var e in establos) { <option value="@e.Codigo">@e.Nombre (Cap: @e.Capacidad)</option> }
-                    </select>
-                </div>
             </div>
         </div>
         <div class="modal-footer border-secondary">
@@ -251,25 +257,6 @@
                     <label class="form-label text-white">Peso (kg) *</label>
                     <input type="text" name="Peso" id="editPeso" class="form-control form-control-glass" required pattern="^\d*([.,]\d+)?$" inputmode="decimal" oninput="this.value = this.value.replace('.', ',');">
                 </div>
-                @if (esPropietario || User.IsInRole("2"))
-                {
-                    <input type="hidden" name="IdCatEstadoCaballo" id="hiddenEstado" value="">
-                    <div class="col-md-4">
-                        <label class="form-label text-white">Estado</label>
-                        <select id="editEstadoDisabled" class="form-control form-control-glass" disabled>
-                            @foreach (var e in estados) { <option value="@e.Id">@e.Nombre</option> }
-                        </select>
-                    </div>
-                }
-                else
-                {
-                    <div class="col-md-4">
-                        <label class="form-label text-white">Estado *</label>
-                        <select name="IdCatEstadoCaballo" id="editEstado" class="form-control form-control-glass" required>
-                            @foreach (var e in estados) { <option value="@e.Id">@e.Nombre</option> }
-                        </select>
-                    </div>
-                }
                 @if (esPropietario)
                 {
                     <input type="hidden" name="CodigoPropietario" id="editPropietario" value="@codigoPropio">
@@ -289,12 +276,6 @@
                         </select>
                     </div>
                 }
-                <div class="col-md-4">
-                    <label class="form-label text-white">Establo *</label>
-                    <select name="CodigoEstablo" id="editEstablo" class="form-control form-control-glass" required>
-                        @foreach (var e in establos) { <option value="@e.Codigo">@e.Nombre</option> }
-                    </select>
-                </div>
             </div>
         </div>
         <div class="modal-footer border-secondary">

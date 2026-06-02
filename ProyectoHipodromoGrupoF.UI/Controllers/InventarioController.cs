@@ -6,31 +6,41 @@ using System;
 
 namespace ProyectoHipodromoGrupoF.UI.Controllers
 {
-    [Authorize(Roles = "2,3")]
+    [Authorize(Roles = "3")]
     public class InventarioController : Controller
     {
         private readonly InventarioService _inventarioService;
-        private readonly EquinosService    _equinosService;
+        private readonly EquinosService _equinosService;
+        private readonly ProveedoresService _proveedoresService;
+        private readonly CatalogosService _catalogosService;
 
-        public InventarioController(InventarioService inventarioService, EquinosService equinosService)
+        public InventarioController(
+    InventarioService inventarioService,
+    EquinosService equinosService,
+    ProveedoresService proveedoresService,
+    CatalogosService catalogosService)
         {
             _inventarioService = inventarioService;
-            _equinosService    = equinosService;
+            _equinosService = equinosService;
+            _proveedoresService = proveedoresService;
+            _catalogosService = catalogosService;
         }
 
         public IActionResult Index()
         {
+            ViewBag.TiposSuministro = _catalogosService.ListarTiposSuministro();
+            ViewBag.Proveedores = _proveedoresService.ListarProveedores();
+
             return View(_inventarioService.ListarSuministros());
         }
 
         public IActionResult Alimentacion()
         {
-            ViewBag.Caballos     = _equinosService.ListarCaballos();
-            ViewBag.Suministros  = _inventarioService.ListarSuministros();
+            ViewBag.Caballos = _equinosService.ListarCaballos();
+            ViewBag.Suministros = _inventarioService.ListarSuministros();
+
             return View(_inventarioService.ListarAlimentacion());
         }
-
-        // ─── SUMINISTROS ─────────────────────────────────────────────────────────
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -38,13 +48,17 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
         {
             try
             {
-                _inventarioService.InsertarSuministro(suministro);
+                var usuarioActual = User.Identity?.Name ?? "usuario_desconocido";
+
+                _inventarioService.InsertarSuministro(suministro, usuarioActual);
+
                 TempData["Exito"] = "Suministro registrado correctamente.";
             }
             catch (Exception ex)
             {
                 TempData["Error"] = $"Error al registrar suministro: {ex.Message}";
             }
+
             return RedirectToAction("Index");
         }
 
@@ -54,34 +68,40 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
         {
             try
             {
-                _inventarioService.ActualizarSuministro(suministro);
+                var usuarioActual = User.Identity?.Name ?? "usuario_desconocido";
+
+                _inventarioService.ActualizarSuministro(suministro, usuarioActual);
+
                 TempData["Exito"] = "Suministro actualizado correctamente.";
             }
             catch (Exception ex)
             {
                 TempData["Error"] = $"Error al actualizar suministro: {ex.Message}";
             }
+
             return RedirectToAction("Index");
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "2")]
+        [Authorize(Roles = "3")]
         public IActionResult EliminarSuministro(string codigo)
         {
             try
             {
-                _inventarioService.EliminarSuministro(codigo);
+                var usuarioActual = User.Identity?.Name ?? "usuario_desconocido";
+
+                _inventarioService.EliminarSuministro(codigo, usuarioActual);
+
                 TempData["Exito"] = "Suministro eliminado correctamente.";
             }
             catch (Exception ex)
             {
                 TempData["Error"] = $"Error al eliminar suministro: {ex.Message}";
             }
+
             return RedirectToAction("Index");
         }
-
-        // ─── ALIMENTACIÓN ────────────────────────────────────────────────────────
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -97,6 +117,7 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
             {
                 TempData["Error"] = $"Error al registrar alimentación: {ex.Message}";
             }
+
             return RedirectToAction("Alimentacion");
         }
 
@@ -114,6 +135,7 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
             {
                 TempData["Error"] = $"Error al actualizar alimentación: {ex.Message}";
             }
+
             return RedirectToAction("Alimentacion");
         }
 
@@ -131,6 +153,7 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
             {
                 TempData["Error"] = $"Error al eliminar registro: {ex.Message}";
             }
+
             return RedirectToAction("Alimentacion");
         }
     }

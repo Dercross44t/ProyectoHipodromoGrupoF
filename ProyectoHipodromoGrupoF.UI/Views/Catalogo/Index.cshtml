@@ -1,0 +1,68 @@
+﻿@using System.Data
+
+@{
+    ViewData["Title"] = "Bitácoras Trimestrales";
+
+    var bitacoras = ViewBag.Bitacoras as Dictionary<string, DataTable> ?? new();
+}
+
+<div class="mb-4">
+    <p class="text-secondary m-0">
+        Consulta de las seis bitácoras del sistema. Estas tablas funcionan como registros separados por trimestre.
+    </p>
+</div>
+
+<div class="alert alert-info mb-4">
+    <i class="fa-solid fa-circle-info me-2"></i>
+    Esta sección es únicamente de consulta. No permite insertar, editar ni eliminar registros.
+</div>
+
+@foreach (var bitacora in bitacoras)
+{
+    <div class="glass-panel p-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="text-white m-0">
+                <i class="fa-solid fa-table-list me-2 text-primary"></i>
+                @bitacora.Key
+            </h4>
+
+            <span class="badge bg-warning text-dark">
+                Registro trimestral
+            </span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-glass w-100 mb-0">
+                <thead>
+                    <tr>
+                        @foreach (DataColumn columna in bitacora.Value.Columns)
+                        {
+                            <th>@columna.ColumnName</th>
+                        }
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (DataRow fila in bitacora.Value.Rows)
+                    {
+                        <tr>
+                            @foreach (DataColumn columna in bitacora.Value.Columns)
+                            {
+                                <td>@fila[columna]</td>
+                            }
+                        </tr>
+                    }
+
+                    @if (bitacora.Value.Rows.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="@bitacora.Value.Columns.Count" class="text-center text-secondary py-4">
+                                No hay registros en esta bitácora.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}

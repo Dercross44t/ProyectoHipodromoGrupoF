@@ -118,6 +118,16 @@
             <label class="form-label text-white">Tratamiento</label>
             <textarea name="Tratamiento" class="form-control form-control-glass" rows="2" maxlength="200"></textarea>
           </div>
+                        <div class="mb-3">
+                            <label class="form-label text-white">Estado del Caballo *</label>
+                            <select name="IdCatEstadoCaballo" class="form-control form-control-glass" required>
+                                <option value="">— Seleccione estado —</option>
+                                @foreach (var e in ViewBag.EstadosCaballo)
+                                {
+                                    <option value="@e.Id">@e.Nombre</option>
+                                }
+                            </select>
+                        </div>
           <div class="row">
             <div class="col-md-6 mb-3">
                 <label class="form-label text-white">Fecha de Revisión</label>

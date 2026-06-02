@@ -54,6 +54,7 @@ namespace ProyectoHipodromoGrupoF.AccesoADatos
             comando.Parameters.AddWithValue(inscripcion.IdCatEstadoInscripcion);
             comando.ExecuteNonQuery();
         }
+        
 
         public void ActualizarInscripcion(Inscripcion inscripcion)
         {
@@ -90,6 +91,30 @@ namespace ProyectoHipodromoGrupoF.AccesoADatos
             comando.Parameters.AddWithValue(codigoCaballo);
             var resultado = comando.ExecuteScalar();
             return Convert.ToInt64(resultado) > 0;
+        }
+
+        public List<CaballoInscripcion> ListarCaballosParaInscripcion()
+        {
+            var lista = new List<CaballoInscripcion>();
+
+            using var conexion = _conexionDB.ObtenerConexion();
+            using var comando = new NpgsqlCommand(
+                "SELECT * FROM public.listar_caballos_para_inscripcion()", conexion);
+
+            using var lector = comando.ExecuteReader();
+
+            while (lector.Read())
+            {
+                lista.Add(new CaballoInscripcion
+                {
+                    Codigo = lector.GetString(0),
+                    Nombre = lector.GetString(1),
+                    PuedeInscribirse = lector.GetBoolean(2),
+                    Motivo = lector.IsDBNull(3) ? string.Empty : lector.GetString(3)
+                });
+            }
+
+            return lista;
         }
 
         private static Inscripcion MapearInscripcion(NpgsqlDataReader lector) => new Inscripcion

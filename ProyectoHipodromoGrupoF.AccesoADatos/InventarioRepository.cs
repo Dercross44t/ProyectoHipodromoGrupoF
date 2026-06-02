@@ -29,42 +29,72 @@ namespace ProyectoHipodromoGrupoF.AccesoADatos
             return suministros;
         }
 
-        public void InsertarSuministro(Suministro suministro)
+        public void InsertarSuministro(Suministro suministro, string usuarioActual)
         {
             using var conexion = _conexionDB.ObtenerConexion();
-            // insertar_suministro(nombre, codigo_proveedor, cantidad_disponible, fecha_ingreso, id_cat_tipo_suministro)
+
+            using var comandoUsuario = new NpgsqlCommand(
+                "CALL public.establecer_usuario_actual($1)", conexion);
+
+            comandoUsuario.Parameters.AddWithValue(usuarioActual ?? "usuario_desconocido");
+            comandoUsuario.ExecuteNonQuery();
+
             using var comando = new NpgsqlCommand(
                 "CALL public.insertar_suministro($1,$2,$3,$4,$5)", conexion);
+
             comando.Parameters.AddWithValue(suministro.Nombre);
             comando.Parameters.AddWithValue(
-                string.IsNullOrEmpty(suministro.CodigoProveedor) ? DBNull.Value : (object)suministro.CodigoProveedor);
+                string.IsNullOrEmpty(suministro.CodigoProveedor)
+                    ? DBNull.Value
+                    : (object)suministro.CodigoProveedor);
             comando.Parameters.AddWithValue(suministro.CantidadDisponible);
             comando.Parameters.AddWithValue(DateOnly.FromDateTime(suministro.FechaIngreso));
             comando.Parameters.AddWithValue(suministro.IdCatTipoSuministro);
+
             comando.ExecuteNonQuery();
         }
 
-        public void ActualizarSuministro(Suministro suministro)
+        public void ActualizarSuministro(Suministro suministro, string usuarioActual)
         {
             using var conexion = _conexionDB.ObtenerConexion();
-            // actualizar_suministro(codigo, nombre, codigo_proveedor, cantidad_disponible, fecha_ingreso, id_cat_tipo)
+
+            using var comandoUsuario = new NpgsqlCommand(
+                "CALL public.establecer_usuario_actual($1)", conexion);
+
+            comandoUsuario.Parameters.AddWithValue(usuarioActual ?? "usuario_desconocido");
+            comandoUsuario.ExecuteNonQuery();
+
             using var comando = new NpgsqlCommand(
                 "CALL public.actualizar_suministro($1,$2,$3,$4,$5,$6)", conexion);
+
             comando.Parameters.AddWithValue(suministro.Codigo);
             comando.Parameters.AddWithValue(suministro.Nombre);
             comando.Parameters.AddWithValue(
-                string.IsNullOrEmpty(suministro.CodigoProveedor) ? DBNull.Value : (object)suministro.CodigoProveedor);
+                string.IsNullOrEmpty(suministro.CodigoProveedor)
+                    ? DBNull.Value
+                    : (object)suministro.CodigoProveedor);
             comando.Parameters.AddWithValue(suministro.CantidadDisponible);
             comando.Parameters.AddWithValue(DateOnly.FromDateTime(suministro.FechaIngreso));
             comando.Parameters.AddWithValue(suministro.IdCatTipoSuministro);
+
             comando.ExecuteNonQuery();
         }
 
-        public void EliminarSuministro(string codigo)
+        public void EliminarSuministro(string codigo, string usuarioActual)
         {
             using var conexion = _conexionDB.ObtenerConexion();
-            using var comando = new NpgsqlCommand("CALL public.eliminar_suministro($1)", conexion);
+
+            using var comandoUsuario = new NpgsqlCommand(
+                "CALL public.establecer_usuario_actual($1)", conexion);
+
+            comandoUsuario.Parameters.AddWithValue(usuarioActual ?? "usuario_desconocido");
+            comandoUsuario.ExecuteNonQuery();
+
+            using var comando = new NpgsqlCommand(
+                "CALL public.eliminar_suministro($1)", conexion);
+
             comando.Parameters.AddWithValue(codigo);
+
             comando.ExecuteNonQuery();
         }
 

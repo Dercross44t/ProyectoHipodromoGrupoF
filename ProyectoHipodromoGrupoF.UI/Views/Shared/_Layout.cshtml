@@ -20,101 +20,121 @@
 <body>
     
     <!-- Sidebar Navigation -->
-    <nav id="sidebar">
-        <div class="sidebar-header">
-            <i class="fa-solid fa-horse-head"></i> Hipódromo
+    <aside id="sidebar">
+        <div class="sidebar-brand">
+            <i class="fa-solid fa-horse-head"></i>
+            <span>Hipódromo</span>
         </div>
-        <ul class="sidebar-menu">
-            <li>
-                <a asp-controller="Home" asp-action="Index">
-                    <i class="fa-solid fa-chart-pie fa-fw"></i> Dashboard
+
+        <nav class="sidebar-menu">
+
+            @* Administrador *@
+            @if (User.IsInRole("2"))
+            {
+                <a asp-controller="Home" asp-action="Index" class="sidebar-link">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Dashboard</span>
                 </a>
-            </li>
 
-            @if(User.IsInRole("2"))
-            {
-                <li>
-                    <a asp-controller="Personas" asp-action="Index">
-                        <i class="fa-solid fa-users fa-fw"></i> Usuarios
-                    </a>
-                </li>
-            }
-
-            @if(User.IsInRole("1") || User.IsInRole("2") || User.IsInRole("3") || User.IsInRole("4"))
-            {
-                <li>
-                    <a asp-controller="Equinos" asp-action="Index">
-                        <i class="fa-solid fa-horse fa-fw"></i> Equinos &amp; Establos
-                        @if(ViewBag.AlertasVet != null && (int)ViewBag.AlertasVet > 0)
-                        {
-                            <span class="badge bg-danger rounded-pill ms-1" title="Alertas veterinarias pendientes">@ViewBag.AlertasVet</span>
-                        }
-                    </a>
-                </li>
-            }
-
-            @if(User.IsInRole("1") || User.IsInRole("2") || User.IsInRole("3"))
-            {
-                <li>
-                    <a asp-controller="Inscripciones" asp-action="Index">
-                        <i class="fa-solid fa-clipboard-list fa-fw"></i> Inscripciones
-                    </a>
-                </li>
-            }
-
-            @if(User.IsInRole("1") || User.IsInRole("2"))
-            {
-                <li>
-                    <a asp-controller="Eventos" asp-action="Index">
-                        <i class="fa-solid fa-flag-checkered fa-fw"></i> Eventos &amp; Carreras
-                    </a>
-                </li>
-                <li>
-                    <a asp-controller="Resultados" asp-action="Index">
-                        <i class="fa-solid fa-trophy fa-fw"></i> Resultados
-                    </a>
-                </li>
-            }
-
-            @if(User.IsInRole("2") || User.IsInRole("3"))
-            {
-                <li>
-                    <a asp-controller="Inventario" asp-action="Index">
-                        <i class="fa-solid fa-box-open fa-fw"></i> Inventario
-                    </a>
-                </li>
-            }
-
-
-            @if(User.IsInRole("2"))
-            {
-                <li>
-                    <a asp-controller="Proveedores" asp-action="Index">
-                        <i class="fa-solid fa-truck-fast fa-fw"></i> Proveedores
-                    </a>
-                </li>
-                <li>
-                    <a asp-controller="Facturacion" asp-action="Index">
-                        <i class="fa-solid fa-file-invoice-dollar fa-fw"></i> Facturación
-                    </a>
-                </li>
-            }
-            @if(User.IsInRole("1"))
-            {
-                <li>
-                    <a asp-controller="Facturacion" asp-action="MisFacturas">
-                        <i class="fa-solid fa-file-invoice-dollar fa-fw"></i> Mis Facturas
-                    </a>
-                </li>
-            }
-
-            <li class="mt-4">
-                <a asp-controller="Auth" asp-action="Logout" class="text-danger">
-                    <i class="fa-solid fa-sign-out-alt fa-fw"></i> Cerrar Sesión
+                <a asp-controller="Personas" asp-action="Personas" class="sidebar-link">
+                    <i class="fa-solid fa-users"></i>
+                    <span>Equipo</span>
                 </a>
-            </li>
-        </ul>
-    </nav>
+
+                <a asp-controller="Equinos" asp-action="Index" class="sidebar-link">
+                    <i class="fa-solid fa-horse"></i>
+                    <span>Equinos & Establos</span>
+                </a>
+
+                <a asp-controller="Inscripciones" asp-action="Index" class="sidebar-link">
+                    <i class="fa-solid fa-clipboard-list"></i>
+                    <span>Inscripciones</span>
+                </a>
+
+                <a asp-controller="Eventos" asp-action="Index" class="sidebar-link">
+                    <i class="fa-solid fa-flag-checkered"></i>
+                    <span>Eventos & Carreras</span>
+                </a>
+
+                <a asp-controller="Resultados" asp-action="Index" class="sidebar-link">
+                    <i class="fa-solid fa-trophy"></i>
+                    <span>Resultados</span>
+                </a>
+
+                <a asp-controller="Proveedores" asp-action="Index" class="sidebar-link">
+                    <i class="fa-solid fa-truck-fast"></i>
+                    <span>Proveedores</span>
+                </a>
+
+                <a asp-controller="Facturacion" asp-action="Index" class="sidebar-link">
+                    <i class="fa-solid fa-file-invoice-dollar"></i>
+                    <span>Facturación</span>
+                </a>
+
+                <a asp-controller="Catalogo" asp-action="Index" class="sidebar-link">
+                    <i class="fa-solid fa-table-list"></i>
+                    <span>Bitácoras</span>
+                </a>
+            }
+
+            @* Propietario *@
+            @if (User.IsInRole("1"))
+            {
+                <a asp-controller="Equinos" asp-action="Index" class="sidebar-link">
+                    <i class="fa-solid fa-horse"></i>
+                    <span>Equinos & Establos</span>
+                </a>
+
+                <a asp-controller="Inscripciones" asp-action="Index" class="sidebar-link">
+                    <i class="fa-solid fa-clipboard-list"></i>
+                    <span>Inscripciones</span>
+                </a>
+
+                <a asp-controller="Eventos" asp-action="Index" class="sidebar-link">
+                    <i class="fa-solid fa-flag-checkered"></i>
+                    <span>Eventos & Carreras</span>
+                </a>
+
+                <a asp-controller="Resultados" asp-action="Index" class="sidebar-link">
+                    <i class="fa-solid fa-trophy"></i>
+                    <span>Resultados</span>
+                </a>
+
+                <a asp-controller="Facturacion" asp-action="MisFacturas" class="sidebar-link">
+                    <i class="fa-solid fa-file-invoice-dollar"></i>
+                    <span>Facturación</span>
+                </a>
+            }
+
+            @* Encargado de Establo *@
+            @if (User.IsInRole("3"))
+            {
+                <a asp-controller="Equinos" asp-action="Establos" class="sidebar-link">
+                    <i class="fa-solid fa-horse"></i>
+                    <span>Equinos & Establos</span>
+                </a>
+
+                <a asp-controller="Inventario" asp-action="Index" class="sidebar-link">
+                    <i class="fa-solid fa-box-open"></i>
+                    <span>Inventario</span>
+                </a>
+            }
+
+            @* Veterinario *@
+            @if (User.IsInRole("4"))
+            {
+                <a asp-controller="Equinos" asp-action="HistorialVeterinario" class="sidebar-link">
+                    <i class="fa-solid fa-horse"></i>
+                    <span>Equinos & Establos</span>
+                </a>
+            }
+
+            <a asp-controller="Auth" asp-action="Logout" class="sidebar-link text-danger mt-4">
+                <i class="fa-solid fa-right-from-bracket"></i>
+                <span>Cerrar Sesión</span>
+            </a>
+        </nav>
+    </aside>
 
     <!-- Main Content -->
     <div id="main-content">

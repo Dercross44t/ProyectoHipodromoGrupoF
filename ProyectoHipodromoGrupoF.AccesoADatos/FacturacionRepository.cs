@@ -30,6 +30,25 @@ namespace ProyectoHipodromoGrupoF.AccesoADatos
             return facturas;
         }
 
+        public bool ExisteFacturaPorPropietarioEvento(string codigoPropietario, string codigoEvento)
+        {
+            using var conexion = _conexionDB.ObtenerConexion();
+
+            using var comando = new NpgsqlCommand(
+                @"SELECT COUNT(*) 
+          FROM public.factura 
+          WHERE codigo_propietario = $1 
+          AND codigo_evento = $2",
+                conexion);
+
+            comando.Parameters.AddWithValue(codigoPropietario);
+            comando.Parameters.AddWithValue(codigoEvento);
+
+            var total = Convert.ToInt32(comando.ExecuteScalar());
+
+            return total > 0;
+        }
+
         public List<Factura> ListarFacturasPorPropietario(string codigoPropietario)
         {
             var facturas = new List<Factura>();
@@ -66,6 +85,24 @@ namespace ProyectoHipodromoGrupoF.AccesoADatos
             comando.Parameters.AddWithValue(factura.Total);
             comando.Parameters.AddWithValue(factura.IdCatEstadoPago);
             comando.ExecuteNonQuery();
+        }
+
+        public Factura? ObtenerFacturaPorCodigo(string codigo)
+        {
+            using var conexion = _conexionDB.ObtenerConexion();
+
+            using var comando = new NpgsqlCommand(
+                "SELECT * FROM public.factura WHERE codigo = $1",
+                conexion);
+
+            comando.Parameters.AddWithValue(codigo);
+
+            using var lector = comando.ExecuteReader();
+
+            if (lector.Read())
+                return MapearFactura(lector);
+
+            return null;
         }
 
         public void ActualizarFactura(Factura factura, string usuarioActual)

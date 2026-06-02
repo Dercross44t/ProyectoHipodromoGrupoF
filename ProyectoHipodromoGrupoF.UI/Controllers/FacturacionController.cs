@@ -36,6 +36,7 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
             ViewBag.Propietarios = _personasService.ListarPropietarios();
             ViewBag.PersonasMap  = _personasService.ListarPersonas(); // para join de nombre
             ViewBag.Eventos      = _eventosService.ListarEventos();
+            ViewBag.MetodosPago = _catalogosService.ListarMetodosPago();
             return View(_facturacionService.ListarFacturas());
         }
 
@@ -47,11 +48,31 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
             ViewBag.Propietarios = _personasService.ListarPropietarios();
             ViewBag.PersonasMap  = _personasService.ListarPersonas();
             ViewBag.Eventos      = _eventosService.ListarEventos();
+            ViewBag.MetodosPago = _catalogosService.ListarMetodosPago();
             return View("Index", _facturacionService.ListarFacturasPorPropietario(codigoPropietario));
         }
 
 
-        
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "1")]
+        public IActionResult PagarFactura(string codigoFactura, double montoPagado, int idCatMetodoPago)
+        {
+            try
+            {
+                var usuarioActual = User.Identity?.Name ?? "usuario_desconocido";
+
+                _facturacionService.PagarFactura(codigoFactura, montoPagado, idCatMetodoPago, usuarioActual);
+
+                TempData["Exito"] = "Pago registrado correctamente.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error al pagar factura: {ex.Message}";
+            }
+
+            return RedirectToAction("Index");
+        }
 
         [HttpPost][ValidateAntiForgeryToken]
         [Authorize(Roles = "2")]

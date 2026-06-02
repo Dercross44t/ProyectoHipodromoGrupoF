@@ -7,13 +7,37 @@
 }
 
 <!-- Nav Tabs -->
-<ul class="nav nav-pills mb-4 border-bottom border-secondary pb-3">
-  <li class="nav-item"><a class="nav-link text-secondary" asp-action="Index">Usuarios del Sistema</a></li>
-  <li class="nav-item"><a class="nav-link active bg-transparent text-primary fw-bold" asp-action="Personas">Personas</a></li>
-  <li class="nav-item"><a class="nav-link text-secondary" asp-action="Propietarios">Propietarios</a></li>
-  <li class="nav-item"><a class="nav-link text-secondary" asp-action="Veterinarios">Veterinarios</a></li>
-  <li class="nav-item"><a class="nav-link text-secondary" asp-action="Encargados">Encargados</a></li>
-</ul>
+<div class="d-flex gap-4 border-bottom border-secondary mb-4 pb-3">
+    <a class="@(ViewContext.RouteData.Values["action"]?.ToString() == "Personas" ? "text-primary fw-bold" : "text-secondary") text-decoration-none"
+       asp-controller="Personas" asp-action="Personas">
+        Personas
+    </a>
+
+    <a class="@(ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "text-primary fw-bold" : "text-secondary") text-decoration-none"
+       asp-controller="Personas" asp-action="Index">
+        Usuarios del Sistema
+    </a>
+
+    <a class="@(ViewContext.RouteData.Values["action"]?.ToString() == "Propietarios" ? "text-primary fw-bold" : "text-secondary") text-decoration-none"
+       asp-controller="Personas" asp-action="Propietarios">
+        Directorio de Propietarios
+    </a>
+
+    <a class="@(ViewContext.RouteData.Values["action"]?.ToString() == "Administradores" ? "text-primary fw-bold" : "text-secondary") text-decoration-none"
+       asp-controller="Personas" asp-action="Administradores">
+        Administradores
+    </a>
+
+    <a class="@(ViewContext.RouteData.Values["action"]?.ToString() == "Veterinarios" ? "text-primary fw-bold" : "text-secondary") text-decoration-none"
+       asp-controller="Personas" asp-action="Veterinarios">
+        Personal Veterinario
+    </a>
+
+    <a class="@(ViewContext.RouteData.Values["action"]?.ToString() == "Encargados" ? "text-primary fw-bold" : "text-secondary") text-decoration-none"
+       asp-controller="Personas" asp-action="Encargados">
+        Encargados de Establo
+    </a>
+</div>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <p class="text-secondary m-0">Directorio base de personas físicas del sistema.</p>
@@ -25,14 +49,25 @@
 <div class="glass-panel p-0 overflow-hidden">
     <table class="table table-glass w-100 mb-0">
         <thead>
-            <tr><th>Cédula</th><th>Nombre Completo</th><th>Barrio (ID)</th><th class="text-end">Acciones</th></tr>
+            <tr>
+                <th>Cédula</th>
+                <th>Nombre 1</th>
+                <th>Nombre 2</th>
+                <th>Apellido 1</th>
+                <th>Apellido 2</th>
+                <th>ID Barrio</th>
+                <th class="text-end">Acciones</th>
+            </tr>
         </thead>
         <tbody>
             @foreach (var p in Model)
             {
                 <tr>
                     <td class="fw-bold">@p.Cedula</td>
-                    <td>@p.Nombre1 @p.Nombre2 @p.Apellido1 @p.Apellido2</td>
+                    <td>@p.Nombre1</td>
+                    <td>@p.Nombre2</td>
+                    <td>@p.Apellido1</td>
+                    <td>@p.Apellido2</td>
                     <td class="text-secondary">@p.IdCatBarrio</td>
                     <td class="text-end">
                         <button class="btn btn-sm btn-outline-secondary border-0 me-1"
@@ -119,28 +154,6 @@
                     <select name="IdCatBarrio" class="form-control form-control-glass" id="selectBarrio" required disabled>
                         <option value="">— Seleccione distrito —</option>
                     </select>
-                </div>
-
-                <!-- Teléfonos dinámicos -->
-                <div class="col-12 mt-2">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <label class="form-label text-white m-0"><i class="fa-solid fa-phone me-2 text-secondary"></i>Teléfonos</label>
-                        <button type="button" class="btn btn-sm btn-secondary-custom" onclick="agregarTelefono()" id="btnAgregarTel">
-                            <i class="fa-solid fa-plus me-1"></i> Agregar
-                        </button>
-                    </div>
-                    <div id="telefonosContainer"></div>
-                </div>
-
-                <!-- Correos dinámicos -->
-                <div class="col-12 mt-2">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <label class="form-label text-white m-0"><i class="fa-solid fa-envelope me-2 text-secondary"></i>Correos Electrónicos</label>
-                        <button type="button" class="btn btn-sm btn-secondary-custom" onclick="agregarCorreo()" id="btnAgregarCorreo">
-                            <i class="fa-solid fa-plus me-1"></i> Agregar
-                        </button>
-                    </div>
-                    <div id="correosContainer"></div>
                 </div>
             </div>
         </div>

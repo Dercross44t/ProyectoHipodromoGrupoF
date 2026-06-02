@@ -1,20 +1,21 @@
 @model IEnumerable<ProyectoHipodromoGrupoF.Modelo.Factura>
+
 @{
     ViewData["Title"] = "Facturación";
-    var estadosPago  = ViewBag.EstadosPago  as List<ProyectoHipodromoGrupoF.Modelo.CatalogoItem> ?? new();
-    var propietarios = ViewBag.Propietarios as List<ProyectoHipodromoGrupoF.Modelo.Propietario>  ?? new();
-    var personas     = ViewBag.PersonasMap  as List<ProyectoHipodromoGrupoF.Modelo.Persona>      ?? new();
-    var eventos      = ViewBag.Eventos      as List<ProyectoHipodromoGrupoF.Modelo.Evento>        ?? new();
+
+    var estadosPago = ViewBag.EstadosPago as List<ProyectoHipodromoGrupoF.Modelo.CatalogoItem> ?? new();
+    var propietarios = ViewBag.Propietarios as List<ProyectoHipodromoGrupoF.Modelo.Propietario> ?? new();
+    var personas = ViewBag.PersonasMap as List<ProyectoHipodromoGrupoF.Modelo.Persona> ?? new();
+    var eventos = ViewBag.Eventos as List<ProyectoHipodromoGrupoF.Modelo.Evento> ?? new();
+    var metodosPago = ViewBag.MetodosPago as List<ProyectoHipodromoGrupoF.Modelo.CatalogoItem> ?? new();
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <p class="text-secondary m-0">Gestión de facturas con IVA 13% según legislación costarricense.</p>
+
     <div class="d-flex gap-2">
-        @if(User.IsInRole("2"))
+        @if (User.IsInRole("2"))
         {
-            <button class="btn btn-secondary-custom" data-bs-toggle="modal" data-bs-target="#genAutoModal" id="btnGenFacturaAuto">
-                <i class="fa-solid fa-wand-magic-sparkles me-2"></i> Generar Automática
-            </button>
             <button class="btn btn-primary-custom" data-bs-toggle="modal" data-bs-target="#insertarFacturaModal" id="btnNuevaFactura">
                 <i class="fa-solid fa-plus me-2"></i> Nueva Factura
             </button>
@@ -22,12 +23,21 @@
     </div>
 </div>
 
-<!-- Navegación de pestañas -->
 <ul class="nav nav-pills mb-4 border-bottom border-secondary pb-3">
-    <li class="nav-item"><a class="nav-link active bg-transparent text-primary fw-bold" asp-action="@(User.IsInRole("1") ? "MisFacturas" : "Index")">Facturas Emitidas</a></li>
-    @if(User.IsInRole("2"))
+    <li class="nav-item">
+        <a class="nav-link active bg-transparent text-primary fw-bold"
+           asp-action="@(User.IsInRole("1") ? "MisFacturas" : "Index")">
+            Facturas Emitidas
+        </a>
+    </li>
+
+    @if (User.IsInRole("2"))
     {
-        <li class="nav-item"><a class="nav-link text-secondary" asp-action="Transacciones">Historial de Pagos</a></li>
+        <li class="nav-item">
+            <a class="nav-link text-secondary" asp-action="Transacciones">
+                Historial de Pagos
+            </a>
+        </li>
     }
 </ul>
 
@@ -46,13 +56,25 @@
                 <th class="text-end">Acciones</th>
             </tr>
         </thead>
+
         <tbody>
             @foreach (var f in Model)
             {
-                var propNombre = personas.FirstOrDefault(p => propietarios.Any(pr => pr.Cedula == p.Cedula && pr.Codigo == f.CodigoPropietario))?.Nombre1 ?? f.CodigoPropietario;
+                var propNombre = personas
+                    .FirstOrDefault(p => propietarios.Any(pr => pr.Cedula == p.Cedula && pr.Codigo == f.CodigoPropietario))
+                    ?.Nombre1 ?? f.CodigoPropietario;
+
                 var eventoNombre = eventos.FirstOrDefault(e => e.Codigo == f.CodigoEvento)?.Nombre ?? f.CodigoEvento ?? "—";
                 var estadoNombre = estadosPago.FirstOrDefault(e => e.Id == f.IdCatEstadoPago)?.Nombre ?? f.IdCatEstadoPago.ToString();
-                var estadoCls = f.IdCatEstadoPago == 1 ? "badge badge-active" : f.IdCatEstadoPago == 2 ? "badge bg-warning text-dark" : "badge bg-secondary";
+
+                var estadoCls = f.IdCatEstadoPago == 1
+                    ? "badge badge-active"
+                    : f.IdCatEstadoPago == 2
+                        ? "badge bg-warning text-dark"
+                        : f.IdCatEstadoPago == 5
+                            ? "badge bg-info text-dark"
+                            : "badge bg-secondary";
+
                 <tr>
                     <td><code class="text-accent">@f.Codigo</code></td>
                     <td><i class="fa-solid fa-user text-secondary me-2"></i>@propNombre</td>
@@ -62,19 +84,44 @@
                     <td class="text-info">₡@f.Impuestos.ToString("N2")</td>
                     <td>₡@f.Total.ToString("N2")</td>
                     <td><span class="@estadoCls">@estadoNombre</span></td>
+
                     <td class="text-end">
                         <button class="btn btn-sm btn-outline-info border-0 me-1"
-                                onclick="abrirDetalleFactura('@f.Codigo', '@propNombre', '@eventoNombre', @f.Subtotal, @f.Descuento, @f.Impuestos, @f.Total, '@estadoNombre')"
+                                onclick="abrirDetalleFactura('@f.Codigo', '@propNombre', '@eventoNombre', @f.Subtotal.ToString(System.Globalization.CultureInfo.InvariantCulture), @f.Descuento.ToString(System.Globalization.CultureInfo.InvariantCulture), @f.Impuestos.ToString(System.Globalization.CultureInfo.InvariantCulture), @f.Total.ToString(System.Globalization.CultureInfo.InvariantCulture), '@estadoNombre')"
                                 title="Ver Detalle">
                             <i class="fa-solid fa-eye"></i>
                         </button>
-                        @if(User.IsInRole("2"))
+
+                        @if (User.IsInRole("1"))
+                        {
+                            if (f.IdCatEstadoPago == 1)
+                            {
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-success border-0 me-1"
+                                        onclick="abrirModalPago('@f.Codigo', '@f.Total.ToString(System.Globalization.CultureInfo.InvariantCulture)')"
+                                        title="Pagar factura">
+                                    <i class="fa-solid fa-money-bill"></i>
+                                </button>
+                            }
+                            else
+                            {
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-secondary border-0 me-1"
+                                        disabled
+                                        title="Solo se pueden pagar facturas pendientes">
+                                    <i class="fa-solid fa-lock"></i>
+                                </button>
+                            }
+                        }
+
+                        @if (User.IsInRole("2"))
                         {
                             <button class="btn btn-sm btn-outline-secondary border-0 me-1"
                                     onclick="abrirEditarFactura('@f.Codigo','@f.CodigoPropietario','@f.CodigoEvento',@f.IdCatEstadoPago)"
                                     id="btnEditarFact_@f.Codigo">
                                 <i class="fa-solid fa-pen"></i>
                             </button>
+
                             <button class="btn btn-sm btn-outline-danger border-0"
                                     onclick="confirmarEliminarFactura('@f.Codigo')"
                                     id="btnEliminarFact_@f.Codigo">
@@ -84,355 +131,499 @@
                     </td>
                 </tr>
             }
+
             @if (!Model.Any())
             {
-                <tr><td colspan="9" class="text-center text-secondary py-5">
-                    <i class="fa-solid fa-file-invoice-dollar fa-2x mb-2 d-block opacity-25"></i>
-                    No hay facturas emitidas.
-                </td></tr>
+                <tr>
+                    <td colspan="9" class="text-center text-secondary py-5">
+                        <i class="fa-solid fa-file-invoice-dollar fa-2x mb-2 d-block opacity-25"></i>
+                        No hay facturas emitidas.
+                    </td>
+                </tr>
             }
         </tbody>
     </table>
 </div>
 
-<!-- MODAL INSERTAR MANUAL -->
-<div class="modal fade" id="insertarFacturaModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content glass-card border-0">
-      <div class="modal-header border-secondary">
-        <h5 class="modal-title text-white"><i class="fa-solid fa-file-invoice-dollar me-2"></i>Nueva Factura Manual</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <form asp-action="InsertarFactura" method="post">
-        @Html.AntiForgeryToken()
-        <div class="modal-body">
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label text-white">Propietario *</label>
-                    <select name="CodigoPropietario" class="form-control form-control-glass" required id="selectPropFact" onchange="verificarDescuentoProp(this.value)">
-                        <option value="">— Seleccione —</option>
-                        @foreach (var p in propietarios) {
-                            var nombre = personas.FirstOrDefault(pe => pe.Cedula == p.Cedula)?.Nombre1 ?? p.Cedula;
-                            <option value="@p.Codigo" data-descuento="@p.DescuentoProximaFacturacion.ToString().ToLower()">@nombre (@p.Codigo)</option>
-                        }
-                    </select>
-                    <div id="badgeDescuento" class="mt-1" style="display:none">
-                        <span class="badge badge-active"><i class="fa-solid fa-tag me-1"></i>Este propietario tiene 10% de descuento activo</span>
+<!-- MODAL PAGAR FACTURA -->
+<div class="modal fade" id="pagarFacturaModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content glass-card border-0">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-white">
+                    <i class="fa-solid fa-money-bill me-2"></i> Pagar Factura
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <form asp-action="PagarFactura" method="post">
+                @Html.AntiForgeryToken()
+
+                <div class="modal-body">
+                    <input type="hidden" name="codigoFactura" id="codigoFacturaPago" />
+
+                    <div class="mb-3">
+                        <label class="form-label text-white">Total de la factura</label>
+                        <input type="text"
+                               id="totalFacturaPagoTexto"
+                               class="form-control form-control-glass"
+                               readonly>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-white">Monto a pagar *</label>
+                        <input type="number"
+                               name="montoPagado"
+                               id="montoPagado"
+                               class="form-control form-control-glass"
+                               step="0.01"
+                               min="1"
+                               required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-white">Método de pago *</label>
+                        <select name="idCatMetodoPago"
+                                class="form-control form-control-glass"
+                                required>
+                            <option value="">— Seleccione método —</option>
+
+                            @foreach (var m in metodosPago)
+                            {
+                                <option value="@m.Id">@m.Nombre</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="alert alert-info mb-0">
+                        Si paga el monto completo, la factura quedará como Pagada.
+                        Si paga una parte, esta factura quedará como Parcial y se generará otra factura por el saldo pendiente.
                     </div>
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label text-white">Evento (opcional)</label>
-                    <select name="CodigoEvento" class="form-control form-control-glass" id="selectEventoFact">
-                        <option value="">— Sin evento —</option>
-                        @foreach (var e in eventos) { <option value="@e.Codigo">@e.Nombre (@e.Fecha.ToString("dd/MM/yyyy"))</option> }
-                    </select>
+
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+
+                    <button type="submit" class="btn btn-primary-custom">
+                        <i class="fa-solid fa-check me-1"></i> Confirmar Pago
+                    </button>
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label text-white">Subtotal (₡) *</label>
-                    <input type="number" name="Subtotal" id="inputSubtotalFact" class="form-control form-control-glass" required step="0.01" min="0" oninput="calcularTotales()">
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label text-white">Estado de Pago *</label>
-                    <select name="IdCatEstadoPago" class="form-control form-control-glass" required id="selectEstadoPagoFact">
-                        @foreach (var e in estadosPago) { <option value="@e.Id">@e.Nombre</option> }
-                    </select>
-                </div>
-                <!-- Preview calculado en tiempo real -->
-                <div class="col-12">
-                    <div class="glass-card p-3" style="background:rgba(99,102,241,0.06);">
-                        <div class="row text-center">
-                            <div class="col-3">
-                                <div class="text-secondary small">Subtotal</div>
-                                <div class="text-white fw-bold" id="previewSubtotal">₡0.00</div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL INSERTAR MANUAL -->
+<div class="modal fade" id="insertarFacturaModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content glass-card border-0">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-white">
+                    <i class="fa-solid fa-file-invoice-dollar me-2"></i>Nueva Factura Manual
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <form asp-action="InsertarFactura" method="post">
+                @Html.AntiForgeryToken()
+
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-white">Propietario *</label>
+                            <select name="CodigoPropietario" class="form-control form-control-glass" required id="selectPropFact" onchange="verificarDescuentoProp(this.value)">
+                                <option value="">— Seleccione —</option>
+
+                                @foreach (var p in propietarios)
+                                {
+                                    var nombre = personas.FirstOrDefault(pe => pe.Cedula == p.Cedula)?.Nombre1 ?? p.Cedula;
+                                    <option value="@p.Codigo" data-descuento="@p.DescuentoProximaFacturacion.ToString().ToLower()">
+                                        @nombre (@p.Codigo)
+                                    </option>
+                                }
+                            </select>
+
+                            <div id="badgeDescuento" class="mt-1" style="display:none">
+                                <span class="badge badge-active">
+                                    <i class="fa-solid fa-tag me-1"></i>Este propietario tiene 10% de descuento activo
+                                </span>
                             </div>
-                            <div class="col-3">
-                                <div class="text-secondary small">Descuento (10%)</div>
-                                <div class="text-success fw-bold" id="previewDescuento">₡0.00</div>
-                            </div>
-                            <div class="col-3">
-                                <div class="text-secondary small">IVA (13%)</div>
-                                <div class="text-info fw-bold" id="previewIVA">₡0.00</div>
-                            </div>
-                            <div class="col-3">
-                                <div class="text-secondary small">TOTAL</div>
-                                <div class="text-white fw-bold fs-5" id="previewTotal">₡0.00</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label text-white">Evento (opcional)</label>
+                            <select name="CodigoEvento" class="form-control form-control-glass" id="selectEventoFact">
+                                <option value="">— Sin evento —</option>
+
+                                @foreach (var e in eventos)
+                                {
+                                    <option value="@e.Codigo">@e.Nombre (@e.Fecha.ToString("dd/MM/yyyy"))</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label text-white">Subtotal (₡) *</label>
+                            <input type="number"
+                                   name="Subtotal"
+                                   id="inputSubtotalFact"
+                                   class="form-control form-control-glass"
+                                   required
+                                   step="0.01"
+                                   min="0"
+                                   oninput="calcularTotales()">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label text-white">Estado de Pago *</label>
+                            <select name="IdCatEstadoPago" class="form-control form-control-glass" required id="selectEstadoPagoFact">
+                                @foreach (var e in estadosPago)
+                                {
+                                    <option value="@e.Id">@e.Nombre</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="glass-card p-3" style="background:rgba(99,102,241,0.06);">
+                                <div class="row text-center">
+                                    <div class="col-3">
+                                        <div class="text-secondary small">Subtotal</div>
+                                        <div class="text-white fw-bold" id="previewSubtotal">₡0.00</div>
+                                    </div>
+
+                                    <div class="col-3">
+                                        <div class="text-secondary small">Descuento (10%)</div>
+                                        <div class="text-success fw-bold" id="previewDescuento">₡0.00</div>
+                                    </div>
+
+                                    <div class="col-3">
+                                        <div class="text-secondary small">IVA (13%)</div>
+                                        <div class="text-info fw-bold" id="previewIVA">₡0.00</div>
+                                    </div>
+
+                                    <div class="col-3">
+                                        <div class="text-secondary small">TOTAL</div>
+                                        <div class="text-white fw-bold fs-5" id="previewTotal">₡0.00</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-        <div class="modal-footer border-secondary">
-            <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-primary-custom" id="btnGuardarFactura">
-                <i class="fa-solid fa-floppy-disk me-1"></i> Emitir Factura
-            </button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
 
-<!-- MODAL GENERAR AUTOMÁTICA (con SP) -->
-<div class="modal fade" id="genAutoModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content glass-card border-0">
-      <div class="modal-header border-secondary">
-        <h5 class="modal-title text-white"><i class="fa-solid fa-wand-magic-sparkles me-2"></i>Generar Factura Automática</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <form asp-action="GenerarFacturaAutomatica" method="post">
-        @Html.AntiForgeryToken()
-        <div class="modal-body">
-            <div class="glass-card p-3 mb-3" style="background:rgba(99,102,241,0.1); border-left:3px solid #6366f1;">
-                <small class="text-secondary">
-                    <i class="fa-solid fa-info-circle me-1 text-primary"></i>
-                    El SP calculará automáticamente: IVA 13% + Comisión administrativa 5% y aplicará el descuento del 10% si el propietario lo tiene activo.
-                </small>
-            </div>
-            <div class="mb-3">
-                <label class="form-label text-white">Propietario *</label>
-                <select name="codigoPropietario" class="form-control form-control-glass" required id="selectPropGenAuto">
-                    <option value="">— Seleccione —</option>
-                    @foreach (var p in propietarios) {
-                        var nombre = personas.FirstOrDefault(pe => pe.Cedula == p.Cedula)?.Nombre1 ?? p.Cedula;
-                        <option value="@p.Codigo">@nombre (@p.Codigo) @(p.DescuentoProximaFacturacion ? "⭐ 10% DESC" : "")</option>
-                    }
-                </select>
-            </div>
-            <div class="mb-3">
-                <label class="form-label text-white">Evento *</label>
-                <select name="codigoEvento" class="form-control form-control-glass" required id="selectEventoGenAuto">
-                    <option value="">— Seleccione —</option>
-                    @foreach (var e in eventos) { <option value="@e.Codigo">@e.Nombre (@e.Fecha.ToString("dd/MM/yyyy")) — Premio ₡@e.PremioTotal.ToString("N0")</option> }
-                </select>
-            </div>
-            <div class="mb-3">
-                <label class="form-label text-white">Precio de inscripción (₡) *</label>
-                <input type="number" name="precioInscripcion" class="form-control form-control-glass" required step="0.01" min="1" id="inputPrecioGenAuto">
-            </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+
+                    <button type="submit" class="btn btn-primary-custom" id="btnGuardarFactura">
+                        <i class="fa-solid fa-floppy-disk me-1"></i> Emitir Factura
+                    </button>
+                </div>
+            </form>
         </div>
-        <div class="modal-footer border-secondary">
-            <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-primary-custom" id="btnConfirmarGenAuto">
-                <i class="fa-solid fa-wand-magic-sparkles me-1"></i> Generar
-            </button>
-        </div>
-      </form>
     </div>
-  </div>
 </div>
 
 <!-- MODAL EDITAR -->
 <div class="modal fade" id="editarFacturaModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content glass-card border-0">
-      <div class="modal-header border-secondary">
-        <h5 class="modal-title text-white"><i class="fa-solid fa-pen me-2"></i>Editar Estado de Factura</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <form asp-action="ActualizarFactura" method="post">
-        @Html.AntiForgeryToken()
-        <input type="hidden" name="Codigo" id="editFactCodigo">
-        <input type="hidden" name="CodigoPropietario" id="editFactProp">
-        <input type="hidden" name="CodigoEvento" id="editFactEvento">
-        <input type="hidden" name="Subtotal" id="editFactSubtotal">
-        <input type="hidden" name="Descuento" id="editFactDescuento">
-        <input type="hidden" name="Impuestos" id="editFactImpuestos">
-        <input type="hidden" name="Total" id="editFactTotal">
-        <div class="modal-body">
-            <div class="mb-3">
-                <label class="form-label text-white">Seleccionar factura</label>
-                <select class="form-control form-control-glass" onchange="seleccionarFacturaEditar(this)">
-                    <option value="">— Seleccione —</option>
-                    @foreach (var f in Model) {
-                        <option value="@f.Codigo" data-prop="@f.CodigoPropietario" data-evento="@f.CodigoEvento"
-                                data-subtotal="@f.Subtotal" data-desc="@f.Descuento" data-imp="@f.Impuestos"
-                                data-total="@f.Total" data-estado="@f.IdCatEstadoPago">
-                            @f.Codigo — ₡@f.Total.ToString("N2")
-                        </option>
-                    }
-                </select>
+    <div class="modal-dialog">
+        <div class="modal-content glass-card border-0">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-white">
+                    <i class="fa-solid fa-pen me-2"></i>Editar Estado de Factura
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="mb-3">
-                <label class="form-label text-white">Estado de Pago *</label>
-                <select name="IdCatEstadoPago" id="editFactEstado" class="form-control form-control-glass" required>
-                    @foreach (var e in estadosPago) { <option value="@e.Id">@e.Nombre</option> }
-                </select>
-            </div>
+
+            <form asp-action="ActualizarFactura" method="post">
+                @Html.AntiForgeryToken()
+
+                <input type="hidden" name="Codigo" id="editFactCodigo">
+                <input type="hidden" name="CodigoPropietario" id="editFactProp">
+                <input type="hidden" name="CodigoEvento" id="editFactEvento">
+                <input type="hidden" name="Subtotal" id="editFactSubtotal">
+                <input type="hidden" name="Descuento" id="editFactDescuento">
+                <input type="hidden" name="Impuestos" id="editFactImpuestos">
+                <input type="hidden" name="Total" id="editFactTotal">
+
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-white">Seleccionar factura</label>
+                        <select class="form-control form-control-glass" onchange="seleccionarFacturaEditar(this)">
+                            <option value="">— Seleccione —</option>
+
+                            @foreach (var f in Model)
+                            {
+                                <option value="@f.Codigo"
+                                        data-prop="@f.CodigoPropietario"
+                                        data-evento="@f.CodigoEvento"
+                                        data-subtotal="@f.Subtotal.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                        data-desc="@f.Descuento.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                        data-imp="@f.Impuestos.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                        data-total="@f.Total.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                        data-estado="@f.IdCatEstadoPago">
+                                    @f.Codigo — ₡@f.Total.ToString("N2")
+                                </option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-white">Estado de Pago *</label>
+                        <select name="IdCatEstadoPago" id="editFactEstado" class="form-control form-control-glass" required>
+                            @foreach (var e in estadosPago)
+                            {
+                                <option value="@e.Id">@e.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+
+                    <button type="submit" class="btn btn-primary-custom">
+                        <i class="fa-solid fa-floppy-disk me-1"></i> Actualizar
+                    </button>
+                </div>
+            </form>
         </div>
-        <div class="modal-footer border-secondary">
-            <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-primary-custom">
-                <i class="fa-solid fa-floppy-disk me-1"></i> Actualizar
-            </button>
-        </div>
-      </form>
     </div>
-  </div>
 </div>
 
 <!-- MODAL ELIMINAR -->
 <div class="modal fade" id="eliminarFacturaModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content glass-card border-0">
-      <div class="modal-header border-secondary">
-        <h5 class="modal-title text-white text-danger"><i class="fa-solid fa-trash me-2"></i>Eliminar Factura</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-          <p class="text-secondary">¿Confirmas eliminar la factura <strong class="text-white" id="elimFactCodLabel"></strong>?</p>
-      </div>
-      <div class="modal-footer border-secondary">
-          <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
-          <form asp-action="EliminarFactura" method="post" style="display:inline;">
-              @Html.AntiForgeryToken()
-              <input type="hidden" name="codigo" id="elimFactCodigo">
-              <button type="submit" class="btn btn-danger" id="btnConfirmarElimFact">
-                  <i class="fa-solid fa-trash me-1"></i> Eliminar
-              </button>
-          </form>
-      </div>
+    <div class="modal-dialog">
+        <div class="modal-content glass-card border-0">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-white text-danger">
+                    <i class="fa-solid fa-trash me-2"></i>Eliminar Factura
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <p class="text-secondary">
+                    ¿Confirmas eliminar la factura
+                    <strong class="text-white" id="elimFactCodLabel"></strong>?
+                </p>
+            </div>
+
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">
+                    Cancelar
+                </button>
+
+                <form asp-action="EliminarFactura" method="post" style="display:inline;">
+                    @Html.AntiForgeryToken()
+
+                    <input type="hidden" name="codigo" id="elimFactCodigo">
+
+                    <button type="submit" class="btn btn-danger" id="btnConfirmarElimFact">
+                        <i class="fa-solid fa-trash me-1"></i> Eliminar
+                    </button>
+                </form>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
 
-<!-- MODAL DETALLE FACTURA (TICKET VIRTUAL) -->
+<!-- MODAL DETALLE FACTURA -->
 <div class="modal fade" id="detalleFacturaModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-sm">
-    <div class="modal-content glass-card border-0">
-      <div class="modal-header border-secondary text-center d-block">
-        <h5 class="modal-title text-white mb-0"><i class="fa-solid fa-receipt me-2"></i>Factura</h5>
-        <small class="text-accent" id="detFactCodigo">FAC-000</small>
-      </div>
-      <div class="modal-body font-monospace" style="background-color: rgba(255,255,255,0.02);">
-          <div class="text-center mb-3 border-bottom border-secondary pb-3">
-              <h6 class="text-white mb-1">Hipódromo Valle del Sol</h6>
-              <small class="text-secondary">Cédula Jurídica: 3-101-555555</small>
-          </div>
-          
-          <div class="mb-3">
-              <div class="text-secondary small">Cliente:</div>
-              <div class="text-white fw-bold text-truncate" id="detFactCliente"></div>
-          </div>
-          <div class="mb-3">
-              <div class="text-secondary small">Concepto / Evento:</div>
-              <div class="text-white text-truncate" id="detFactEvento"></div>
-          </div>
-          
-          <div class="border-top border-secondary pt-3 mt-3">
-              <div class="d-flex justify-content-between mb-1">
-                  <span class="text-secondary">Subtotal</span>
-                  <span class="text-white" id="detFactSubtotal"></span>
-              </div>
-              <div class="d-flex justify-content-between mb-1">
-                  <span class="text-secondary">Descuento</span>
-                  <span class="text-success" id="detFactDescuento"></span>
-              </div>
-              <div class="d-flex justify-content-between mb-2 pb-2 border-bottom border-secondary">
-                  <span class="text-secondary">I.V.A (13%)</span>
-                  <span class="text-info" id="detFactIva"></span>
-              </div>
-              <div class="d-flex justify-content-between align-items-center">
-                  <span class="text-white fw-bold">TOTAL</span>
-                  <span class="text-warning fw-bold fs-5" id="detFactTotal"></span>
-              </div>
-          </div>
-          
-          <div class="text-center mt-4 pt-3 border-top border-secondary">
-              <span class="badge" id="detFactEstadoBadge"></span>
-          </div>
-      </div>
-      <div class="modal-footer border-secondary justify-content-center">
-          <button type="button" class="btn btn-sm btn-secondary-custom w-100" data-bs-dismiss="modal">Cerrar Detalle</button>
-      </div>
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content glass-card border-0">
+            <div class="modal-header border-secondary text-center d-block">
+                <h5 class="modal-title text-white mb-0">
+                    <i class="fa-solid fa-receipt me-2"></i>Factura
+                </h5>
+                <small class="text-accent" id="detFactCodigo">FAC-000</small>
+            </div>
+
+            <div class="modal-body font-monospace" style="background-color: rgba(255,255,255,0.02);">
+                <div class="text-center mb-3 border-bottom border-secondary pb-3">
+                    <h6 class="text-white mb-1">Hipódromo Valle del Sol</h6>
+                    <small class="text-secondary">Cédula Jurídica: 3-101-555555</small>
+                </div>
+
+                <div class="mb-3">
+                    <div class="text-secondary small">Cliente:</div>
+                    <div class="text-white fw-bold text-truncate" id="detFactCliente"></div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="text-secondary small">Concepto / Evento:</div>
+                    <div class="text-white text-truncate" id="detFactEvento"></div>
+                </div>
+
+                <div class="border-top border-secondary pt-3 mt-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-secondary">Subtotal</span>
+                        <span class="text-white" id="detFactSubtotal"></span>
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-secondary">Descuento</span>
+                        <span class="text-success" id="detFactDescuento"></span>
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-2 pb-2 border-bottom border-secondary">
+                        <span class="text-secondary">I.V.A (13%)</span>
+                        <span class="text-info" id="detFactIva"></span>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-white fw-bold">TOTAL</span>
+                        <span class="text-warning fw-bold fs-5" id="detFactTotal"></span>
+                    </div>
+                </div>
+
+                <div class="text-center mt-4 pt-3 border-top border-secondary">
+                    <span class="badge" id="detFactEstadoBadge"></span>
+                </div>
+            </div>
+
+            <div class="modal-footer border-secondary justify-content-center">
+                <button type="button" class="btn btn-sm btn-secondary-custom w-100" data-bs-dismiss="modal">
+                    Cerrar Detalle
+                </button>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
 
 @section Scripts {
-<script>
-    var propDescuentos = {};
-    document.querySelectorAll('#selectPropFact option').forEach(o => {
-        if(o.value) propDescuentos[o.value] = o.dataset.descuento === 'true';
-    });
+    <script>
+        var propDescuentos = {};
 
-    async function verificarDescuentoProp(codigo) {
-        const badge = document.getElementById('badgeDescuento');
-        if (!codigo) { badge.style.display = 'none'; return; }
-        // Usar datos del data-attribute (evita llamada extra)
-        const tieneDesc = propDescuentos[codigo] === true;
-        badge.style.display = tieneDesc ? 'inline-block' : 'none';
-        calcularTotales();
-    }
+        document.querySelectorAll('#selectPropFact option').forEach(o => {
+            if (o.value) {
+                propDescuentos[o.value] = o.dataset.descuento === 'true';
+            }
+        });
 
-    function calcularTotales() {
-        const subtotalInput = parseFloat(document.getElementById('inputSubtotalFact')?.value || 0);
-        const propSel = document.getElementById('selectPropFact');
-        const codigo = propSel?.value;
-        const tieneDesc = codigo && propDescuentos[codigo] === true;
+        async function verificarDescuentoProp(codigo) {
+            const badge = document.getElementById('badgeDescuento');
 
-        const descuento  = tieneDesc ? subtotalInput * 0.10 : 0;
-        const neto       = subtotalInput - descuento;
-        const iva        = neto * 0.13;
-        const total      = neto + iva;
+            if (!codigo) {
+                badge.style.display = 'none';
+                return;
+            }
 
-        const fmt = (n) => '₡' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-        document.getElementById('previewSubtotal').textContent  = fmt(subtotalInput);
-        document.getElementById('previewDescuento').textContent = fmt(descuento);
-        document.getElementById('previewIVA').textContent       = fmt(iva);
-        document.getElementById('previewTotal').textContent     = fmt(total);
-    }
+            const tieneDesc = propDescuentos[codigo] === true;
+            badge.style.display = tieneDesc ? 'inline-block' : 'none';
 
-    function abrirEditarFactura(codigo, prop, evento, estado) {
-        document.getElementById('editFactCodigo').value = codigo;
-        document.getElementById('editFactProp').value   = prop;
-        document.getElementById('editFactEvento').value = evento;
-        setVal('editFactEstado', estado);
-        new bootstrap.Modal(document.getElementById('editarFacturaModal')).show();
-    }
+            calcularTotales();
+        }
 
-    function seleccionarFacturaEditar(sel) {
-        const opt = sel.options[sel.selectedIndex];
-        if (!opt.value) return;
-        document.getElementById('editFactCodigo').value    = opt.value;
-        document.getElementById('editFactProp').value      = opt.dataset.prop;
-        document.getElementById('editFactEvento').value    = opt.dataset.evento;
-        document.getElementById('editFactSubtotal').value  = opt.dataset.subtotal;
-        document.getElementById('editFactDescuento').value = opt.dataset.desc;
-        document.getElementById('editFactImpuestos').value = opt.dataset.imp;
-        document.getElementById('editFactTotal').value     = opt.dataset.total;
-        setVal('editFactEstado', opt.dataset.estado);
-    }
+        function calcularTotales() {
+            const subtotalInput = parseFloat(document.getElementById('inputSubtotalFact')?.value || 0);
+            const propSel = document.getElementById('selectPropFact');
+            const codigo = propSel?.value;
+            const tieneDesc = codigo && propDescuentos[codigo] === true;
 
-    function confirmarEliminarFactura(codigo) {
-        document.getElementById('elimFactCodigo').value = codigo;
-        document.getElementById('elimFactCodLabel').textContent = codigo;
-        new bootstrap.Modal(document.getElementById('eliminarFacturaModal')).show();
-    }
+            const descuento = tieneDesc ? subtotalInput * 0.10 : 0;
+            const neto = subtotalInput - descuento;
+            const iva = neto * 0.13;
+            const total = neto + iva;
 
-    function abrirDetalleFactura(codigo, cliente, evento, subtotal, descuento, iva, total, estado) {
-        document.getElementById('detFactCodigo').textContent = codigo;
-        document.getElementById('detFactCliente').textContent = cliente;
-        document.getElementById('detFactEvento').textContent = evento;
-        
-        const fmt = (n) => '₡' + parseFloat(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-        
-        document.getElementById('detFactSubtotal').textContent = fmt(subtotal);
-        document.getElementById('detFactDescuento').textContent = descuento > 0 ? '-' + fmt(descuento) : '₡0.00';
-        document.getElementById('detFactIva').textContent = fmt(iva);
-        document.getElementById('detFactTotal').textContent = fmt(total);
-        
-        const badge = document.getElementById('detFactEstadoBadge');
-        badge.textContent = estado;
-        badge.className = 'badge ' + (estado === 'Pagado' ? 'badge-active' : estado === 'Pendiente' ? 'bg-warning text-dark' : 'bg-secondary');
-        
-        new bootstrap.Modal(document.getElementById('detalleFacturaModal')).show();
-    }
+            const fmt = (n) => '₡' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
-    function setVal(id, val) {
-        const el = document.getElementById(id);
-        if (el) el.value = val;
-    }
-</script>
+            document.getElementById('previewSubtotal').textContent = fmt(subtotalInput);
+            document.getElementById('previewDescuento').textContent = fmt(descuento);
+            document.getElementById('previewIVA').textContent = fmt(iva);
+            document.getElementById('previewTotal').textContent = fmt(total);
+        }
+
+        function abrirEditarFactura(codigo, prop, evento, estado) {
+            document.getElementById('editFactCodigo').value = codigo;
+            document.getElementById('editFactProp').value = prop;
+            document.getElementById('editFactEvento').value = evento;
+
+            setVal('editFactEstado', estado);
+
+            new bootstrap.Modal(document.getElementById('editarFacturaModal')).show();
+        }
+
+        function seleccionarFacturaEditar(sel) {
+            const opt = sel.options[sel.selectedIndex];
+
+            if (!opt.value) return;
+
+            document.getElementById('editFactCodigo').value = opt.value;
+            document.getElementById('editFactProp').value = opt.dataset.prop;
+            document.getElementById('editFactEvento').value = opt.dataset.evento;
+            document.getElementById('editFactSubtotal').value = opt.dataset.subtotal;
+            document.getElementById('editFactDescuento').value = opt.dataset.desc;
+            document.getElementById('editFactImpuestos').value = opt.dataset.imp;
+            document.getElementById('editFactTotal').value = opt.dataset.total;
+
+            setVal('editFactEstado', opt.dataset.estado);
+        }
+
+        function confirmarEliminarFactura(codigo) {
+            document.getElementById('elimFactCodigo').value = codigo;
+            document.getElementById('elimFactCodLabel').textContent = codigo;
+
+            new bootstrap.Modal(document.getElementById('eliminarFacturaModal')).show();
+        }
+
+        function abrirDetalleFactura(codigo, cliente, evento, subtotal, descuento, iva, total, estado) {
+            document.getElementById('detFactCodigo').textContent = codigo;
+            document.getElementById('detFactCliente').textContent = cliente;
+            document.getElementById('detFactEvento').textContent = evento;
+
+            const fmt = (n) => '₡' + parseFloat(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+            document.getElementById('detFactSubtotal').textContent = fmt(subtotal);
+            document.getElementById('detFactDescuento').textContent = descuento > 0 ? '-' + fmt(descuento) : '₡0.00';
+            document.getElementById('detFactIva').textContent = fmt(iva);
+            document.getElementById('detFactTotal').textContent = fmt(total);
+
+            const badge = document.getElementById('detFactEstadoBadge');
+
+            badge.textContent = estado;
+            badge.className = 'badge ' +
+                (estado === 'Pagado'
+                    ? 'badge-active'
+                    : estado === 'Pendiente'
+                        ? 'bg-warning text-dark'
+                        : estado === 'Parcial'
+                            ? 'bg-info text-dark'
+                            : 'bg-secondary');
+
+            new bootstrap.Modal(document.getElementById('detalleFacturaModal')).show();
+        }
+
+        function abrirModalPago(codigoFactura, total) {
+            document.getElementById('codigoFacturaPago').value = codigoFactura;
+
+            document.getElementById('totalFacturaPagoTexto').value =
+                '₡' + Number(total).toLocaleString('es-CR', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+
+            const montoInput = document.getElementById('montoPagado');
+
+            montoInput.value = total;
+            montoInput.max = total;
+
+            const modal = new bootstrap.Modal(document.getElementById('pagarFacturaModal'));
+            modal.show();
+        }
+
+        function setVal(id, val) {
+            const el = document.getElementById(id);
+
+            if (el) {
+                el.value = val;
+            }
+        }
+    </script>
 }

@@ -1,27 +1,33 @@
 @model IEnumerable<ProyectoHipodromoGrupoF.Modelo.Suministro>
+
 @{
     ViewData["Title"] = "Gestión de Suministros";
+
+    var proveedores = ViewBag.Proveedores as List<ProyectoHipodromoGrupoF.Modelo.Proveedor> ?? new();
+    var tiposSuministro = ViewBag.TiposSuministro as List<ProyectoHipodromoGrupoF.Modelo.CatalogoItem> ?? new();
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <p class="text-secondary m-0">Control de inventario, alimentos y suministros médicos.</p>
-    @if(User.IsInRole("2") || User.IsInRole("3"))
-    {
-        <button class="btn btn-primary-custom" data-bs-toggle="modal" data-bs-target="#nuevoSuministroModal">
-            <i class="fa-solid fa-box-open me-2"></i> Nuevo Suministro
-        </button>
-    }
+
+    <button class="btn btn-primary-custom" data-bs-toggle="modal" data-bs-target="#nuevoSuministroModal">
+        <i class="fa-solid fa-box-open me-2"></i> Nuevo Suministro
+    </button>
 </div>
 
-<!-- Nav Tabs -->
-<ul class="nav nav-pills mb-4 border-bottom border-secondary pb-3">
-  <li class="nav-item">
-    <a class="nav-link active bg-transparent text-primary fw-bold" asp-action="Index">Suministros en Stock</a>
-  </li>
-  <li class="nav-item">
-    <a class="nav-link text-secondary" asp-action="Alimentacion">Registro de Alimentación</a>
-  </li>
-</ul>
+<div class="d-flex gap-4 border-bottom border-secondary mb-4 pb-3">
+    <a class="text-primary fw-bold text-decoration-none"
+       asp-controller="Inventario"
+       asp-action="Index">
+        Suministros en Stock
+    </a>
+
+    <a class="text-secondary text-decoration-none"
+       asp-controller="Inventario"
+       asp-action="Alimentacion">
+        Registro de Alimentación
+    </a>
+</div>
 
 <div class="glass-panel p-4">
     <table class="table table-glass w-100">
@@ -36,38 +42,60 @@
                 <th class="text-end">Acciones</th>
             </tr>
         </thead>
+
         <tbody>
             @foreach (var item in Model)
             {
+                var tipo = tiposSuministro.FirstOrDefault(t => t.Id == item.IdCatTipoSuministro)?.Nombre ?? item.IdCatTipoSuministro.ToString();
+
                 <tr>
                     <td class="fw-bold">@item.Codigo</td>
                     <td>@item.Nombre</td>
                     <td>@item.CodigoProveedor</td>
                     <td>
-                        @if(item.CantidadDisponible < 20) {
-                            <span class="text-danger fw-bold"><i class="fa-solid fa-arrow-down me-1"></i>@item.CantidadDisponible</span>
-                        } else {
+                        @if (item.CantidadDisponible <= 0)
+                        {
+                            <span class="text-danger fw-bold">
+                                <i class="fa-solid fa-arrow-down me-1"></i>@item.CantidadDisponible
+                            </span>
+                        }
+                        else
+                        {
                             <span class="text-success fw-bold">@item.CantidadDisponible</span>
                         }
                     </td>
                     <td>@item.FechaIngreso.ToString("dd/MM/yyyy")</td>
                     <td>
-                        @if(item.IdCatTipoSuministro == 1) { <span class="badge bg-secondary">Alimento</span> }
-                        else if(item.IdCatTipoSuministro == 2) { <span class="badge bg-info text-dark">Medicamento</span> }
-                        else { <span class="badge bg-light text-dark">Equipo</span> }
+                        <span class="badge bg-secondary">@tipo</span>
                     </td>
                     <td class="text-end">
-                        @if(User.IsInRole("2"))
-                        {
-                            <form asp-action="EliminarSuministro" method="post" style="display:inline;"
-                                  onsubmit="return confirm('¿Eliminar el suministro @item.Nombre?')">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="codigo" value="@item.Codigo" />
-                                <button type="submit" class="btn btn-sm btn-outline-danger border-0">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
-                            </form>
-                        }
+                        <button type="button"
+                                class="btn btn-sm btn-outline-secondary border-0 me-1"
+                                onclick="abrirEditarSuministro(
+                            '@item.Codigo',
+                            '@item.Nombre',
+                            '@item.CodigoProveedor',
+                            '@item.CantidadDisponible',
+                            '@item.FechaIngreso.ToString("yyyy-MM-dd")',
+                            '@item.IdCatTipoSuministro'
+                            )">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+
+                        <button type="button"
+                                class="btn btn-sm btn-outline-danger border-0"
+                                onclick="confirmarEliminarSuministro('@item.Codigo', '@item.Nombre')">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            }
+
+            @if (!Model.Any())
+            {
+                <tr>
+                    <td colspan="7" class="text-center text-secondary py-5">
+                        No hay suministros registrados.
                     </td>
                 </tr>
             }
@@ -75,52 +103,241 @@
     </table>
 </div>
 
-<!-- Modal -->
-@if(User.IsInRole("2") || User.IsInRole("3"))
-{
+<!-- MODAL REGISTRAR -->
 <div class="modal fade" id="nuevoSuministroModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content glass-card border-0">
-      <div class="modal-header border-secondary">
-        <h5 class="modal-title text-white">Registrar Suministro</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <form asp-action="InsertarSuministro" method="post">
-        @Html.AntiForgeryToken()
-        <div class="modal-body">
-          <div class="mb-3">
-            <label class="form-label text-white">Nombre</label>
-            <input type="text" name="Nombre" class="form-control form-control-glass" required maxlength="50">
-          </div>
-          <div class="mb-3">
-            <label class="form-label text-white">Código Proveedor</label>
-            <input type="text" name="CodigoProveedor" class="form-control form-control-glass" maxlength="10">
-          </div>
-          <div class="row">
-            <div class="col-md-6 mb-3">
-                <label class="form-label text-white">Stock Inicial</label>
-                <input type="number" name="CantidadDisponible" class="form-control form-control-glass" required min="0">
+    <div class="modal-dialog">
+        <div class="modal-content glass-card border-0">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-white">Registrar Suministro</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="col-md-6 mb-3">
-                <label class="form-label text-white">Fecha Ingreso</label>
-                <input type="date" name="FechaIngreso" class="form-control form-control-glass" required value="@DateTime.Today.ToString("yyyy-MM-dd")">
-            </div>
-          </div>
-          <div class="mb-3">
-            <label class="form-label text-white">Tipo de Suministro</label>
-            <select name="IdCatTipoSuministro" class="form-control form-control-glass" required>
-                <option value="1">Alimento</option>
-                <option value="2">Medicamento</option>
-                <option value="3">Equipo</option>
-            </select>
-          </div>
+
+            <form asp-action="InsertarSuministro" method="post">
+                @Html.AntiForgeryToken()
+
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-white">Nombre</label>
+                        <input type="text"
+                               name="Nombre"
+                               class="form-control form-control-glass"
+                               required
+                               maxlength="50">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-white">Proveedor *</label>
+                        <select name="CodigoProveedor" class="form-control form-control-glass" required>
+                            <option value="">— Seleccione proveedor —</option>
+                            @foreach (var p in proveedores)
+                            {
+                                <option value="@p.Codigo">@p.Codigo</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-white">Stock Inicial</label>
+                            <input type="number"
+                                   name="CantidadDisponible"
+                                   class="form-control form-control-glass"
+                                   required
+                                   min="0">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label text-white">Fecha Ingreso</label>
+                            <input type="date"
+                                   name="FechaIngreso"
+                                   class="form-control form-control-glass"
+                                   required
+                                   value="@DateTime.Today.ToString("yyyy-MM-dd")">
+                        </div>
+                    </div>
+
+                    <div class="mb-3 mt-3">
+                        <label class="form-label text-white">Tipo de Suministro</label>
+                        <select name="IdCatTipoSuministro"
+                                class="form-control form-control-glass"
+                                required>
+                            <option value="">— Seleccione tipo —</option>
+                            @foreach (var t in tiposSuministro)
+                            {
+                                <option value="@t.Id">@t.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+
+                    <button type="submit" class="btn btn-primary-custom">
+                        Guardar
+                    </button>
+                </div>
+            </form>
         </div>
-        <div class="modal-footer border-secondary">
-          <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary-custom">Guardar</button>
-        </div>
-      </form>
     </div>
-  </div>
 </div>
+
+<!-- MODAL EDITAR -->
+<div class="modal fade" id="editarSuministroModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content glass-card border-0">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-white">
+                    <i class="fa-solid fa-pen me-2"></i> Editar Suministro
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <form asp-action="ActualizarSuministro" method="post">
+                @Html.AntiForgeryToken()
+
+                <input type="hidden" name="Codigo" id="editCodigoSuministro" />
+
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-white">Nombre</label>
+                        <input type="text"
+                               name="Nombre"
+                               id="editNombreSuministro"
+                               class="form-control form-control-glass"
+                               required
+                               maxlength="50">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-white">Proveedor *</label>
+                        <select name="CodigoProveedor"
+                                id="editCodigoProveedorSuministro"
+                                class="form-control form-control-glass"
+                                required>
+                            <option value="">— Seleccione proveedor —</option>
+                            @foreach (var p in proveedores)
+                            {
+                                <option value="@p.Codigo">@p.Codigo</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-white">Stock</label>
+                        <input type="number"
+                               name="CantidadDisponible"
+                               id="editStockSuministro"
+                               class="form-control form-control-glass"
+                               required
+                               min="0">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-white">Fecha Ingreso</label>
+                        <input type="date"
+                               name="FechaIngreso"
+                               id="editFechaIngresoSuministro"
+                               class="form-control form-control-glass"
+                               required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-white">Tipo de Suministro</label>
+                        <select name="IdCatTipoSuministro"
+                                id="editTipoSuministro"
+                                class="form-control form-control-glass"
+                                required>
+                            <option value="">— Seleccione tipo —</option>
+                            @foreach (var t in tiposSuministro)
+                            {
+                                <option value="@t.Id">@t.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+
+                    <button type="submit" class="btn btn-primary-custom">
+                        <i class="fa-solid fa-floppy-disk me-1"></i> Actualizar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL ELIMINAR -->
+<div class="modal fade" id="eliminarSuministroModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content glass-card border-0">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-white">
+                    <i class="fa-solid fa-triangle-exclamation text-danger me-2"></i>
+                    Confirmar eliminación
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <p class="text-white mb-0">
+                    ¿Está seguro que desea eliminar este suministro?
+                </p>
+
+                <p class="text-secondary mt-2 mb-0">
+                    Suministro seleccionado:
+                    <strong class="text-white" id="suministroEliminarTexto"></strong>
+                </p>
+            </div>
+
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">
+                    Cancelar
+                </button>
+
+                <form asp-action="EliminarSuministro" method="post">
+                    @Html.AntiForgeryToken()
+
+                    <input type="hidden"
+                           id="codigoSuministroEliminar"
+                           name="codigo" />
+
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fa-solid fa-trash me-1"></i>
+                        Eliminar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function abrirEditarSuministro(codigo, nombre, codigoProveedor, cantidadDisponible, fechaIngreso, idTipoSuministro) {
+            document.getElementById('editCodigoSuministro').value = codigo;
+            document.getElementById('editNombreSuministro').value = nombre;
+            document.getElementById('editCodigoProveedorSuministro').value = codigoProveedor;
+            document.getElementById('editStockSuministro').value = cantidadDisponible;
+            document.getElementById('editFechaIngresoSuministro').value = fechaIngreso;
+            document.getElementById('editTipoSuministro').value = idTipoSuministro;
+
+            const modal = new bootstrap.Modal(document.getElementById('editarSuministroModal'));
+            modal.show();
+        }
+
+        function confirmarEliminarSuministro(codigo, nombre) {
+            document.getElementById('codigoSuministroEliminar').value = codigo;
+            document.getElementById('suministroEliminarTexto').innerText = codigo + ' - ' + nombre;
+
+            const modal = new bootstrap.Modal(document.getElementById('eliminarSuministroModal'));
+            modal.show();
+        }
+    </script>
 }

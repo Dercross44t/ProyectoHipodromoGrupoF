@@ -29,6 +29,62 @@ namespace ProyectoHipodromoGrupoF.AccesoADatos
             return caballos;
         }
 
+        public void AsignarCaballoEstablo(string codigoCaballo, string codigoEstablo, string usuarioActual)
+        {
+            using var conexion = _conexionDB.ObtenerConexion();
+
+            using var comandoUsuario = new NpgsqlCommand(
+                "CALL public.establecer_usuario_actual($1)", conexion);
+
+            comandoUsuario.Parameters.AddWithValue(usuarioActual);
+            comandoUsuario.ExecuteNonQuery();
+
+            using var comando = new NpgsqlCommand(
+                "CALL public.asignar_caballo_establo($1,$2)", conexion);
+
+            comando.Parameters.AddWithValue(codigoCaballo);
+            comando.Parameters.AddWithValue(codigoEstablo);
+
+            comando.ExecuteNonQuery();
+        }
+
+        public void CambiarEstadoEstablo(string codigoEstablo, int idCatEstadoEstablo, string usuarioActual)
+        {
+            using var conexion = _conexionDB.ObtenerConexion();
+
+            using var comandoUsuario = new NpgsqlCommand(
+                "CALL public.establecer_usuario_actual($1)", conexion);
+
+            comandoUsuario.Parameters.AddWithValue(usuarioActual);
+            comandoUsuario.ExecuteNonQuery();
+
+            using var comando = new NpgsqlCommand(
+                "CALL public.cambiar_estado_establo($1,$2)", conexion);
+
+            comando.Parameters.AddWithValue(codigoEstablo);
+            comando.Parameters.AddWithValue(idCatEstadoEstablo);
+
+            comando.ExecuteNonQuery();
+        }
+
+        public void QuitarCaballoEstablo(string codigoCaballo, string usuarioActual)
+        {
+            using var conexion = _conexionDB.ObtenerConexion();
+
+            using var comandoUsuario = new NpgsqlCommand(
+                "CALL public.establecer_usuario_actual($1)", conexion);
+
+            comandoUsuario.Parameters.AddWithValue(usuarioActual);
+            comandoUsuario.ExecuteNonQuery();
+
+            using var comando = new NpgsqlCommand(
+                "CALL public.quitar_caballo_establo($1)", conexion);
+
+            comando.Parameters.AddWithValue(codigoCaballo);
+
+            comando.ExecuteNonQuery();
+        }
+
         public List<Caballo> ListarCaballosPorPropietario(string codigoPropietario)
         {
             var caballos = new List<Caballo>();
@@ -58,13 +114,15 @@ namespace ProyectoHipodromoGrupoF.AccesoADatos
                 "CALL public.insertar_caballo($1,$2,$3,$4,$5,$6,$7,$8)", conexion);
 
             comando.Parameters.AddWithValue(caballo.CodigoPropietario);
-            comando.Parameters.AddWithValue(caballo.CodigoEstablo);
+            comando.Parameters.AddWithValue(string.IsNullOrWhiteSpace(caballo.CodigoEstablo)
+                ? DBNull.Value : caballo.CodigoEstablo);
             comando.Parameters.AddWithValue(caballo.Nombre);
             comando.Parameters.AddWithValue(caballo.FechaNacimiento);
             comando.Parameters.AddWithValue(caballo.IdCatSexo);
             comando.Parameters.AddWithValue(caballo.IdCatRaza);
             comando.Parameters.AddWithValue(caballo.Peso);
-            comando.Parameters.AddWithValue(caballo.IdCatEstadoCaballo);
+            comando.Parameters.AddWithValue(caballo.IdCatEstadoCaballo.HasValue
+                ? caballo.IdCatEstadoCaballo.Value : DBNull.Value);
 
             comando.ExecuteNonQuery();
         }
@@ -83,7 +141,11 @@ namespace ProyectoHipodromoGrupoF.AccesoADatos
                 "CALL public.actualizar_caballo($1,$2,$3,$4,$5,$6,$7,$8,$9)", conexion);
             comando.Parameters.AddWithValue(caballo.Codigo);
             comando.Parameters.AddWithValue(caballo.CodigoPropietario);
-            comando.Parameters.AddWithValue(caballo.CodigoEstablo);
+            comando.Parameters.AddWithValue(
+        string.IsNullOrWhiteSpace(caballo.CodigoEstablo)
+        ? DBNull.Value
+        : caballo.CodigoEstablo
+);
             comando.Parameters.AddWithValue(caballo.Nombre);
             comando.Parameters.AddWithValue(caballo.FechaNacimiento);
             comando.Parameters.AddWithValue(caballo.IdCatSexo);
@@ -108,6 +170,25 @@ namespace ProyectoHipodromoGrupoF.AccesoADatos
             comando.ExecuteNonQuery();
         }
 
+        public void ActualizarEstadoCaballo(string codigoCaballo, int idCatEstadoCaballo, string usuarioActual)
+        {
+            using var conexion = _conexionDB.ObtenerConexion();
+
+            using var comandoUsuario = new NpgsqlCommand(
+                "CALL public.establecer_usuario_actual($1)", conexion);
+
+            comandoUsuario.Parameters.AddWithValue(usuarioActual);
+            comandoUsuario.ExecuteNonQuery();
+
+            using var comando = new NpgsqlCommand(
+                "CALL public.actualizar_estado_caballo($1,$2)", conexion);
+
+            comando.Parameters.AddWithValue(codigoCaballo);
+            comando.Parameters.AddWithValue(idCatEstadoCaballo);
+
+            comando.ExecuteNonQuery();
+        }
+
         private static Caballo MapearCaballo(NpgsqlDataReader lector) => new Caballo
         {
             Codigo             = lector.GetString(0),
@@ -118,7 +199,7 @@ namespace ProyectoHipodromoGrupoF.AccesoADatos
             IdCatSexo          = lector.GetInt32(5),
             IdCatRaza          = lector.GetInt32(6),
             Peso               = lector.GetDouble(7),
-            IdCatEstadoCaballo = lector.GetInt32(8)
+            IdCatEstadoCaballo = lector.IsDBNull(8) ? null : lector.GetInt32(8)
         };
 
         // ─── ESTABLOS ────────────────────────────────────────────────────────────

@@ -6,7 +6,7 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <p class="text-secondary m-0">Registro de dueños de caballos y sus beneficios activos.</p>
-    @if(User.IsInRole("2"))
+    @if (User.IsInRole("2"))
     {
         <button class="btn btn-primary-custom" data-bs-toggle="modal" data-bs-target="#nuevoPropietarioModal">
             <i class="fa-solid fa-plus me-2"></i> Registrar Propietario
@@ -14,18 +14,25 @@
     }
 </div>
 
-<!-- Nav Tabs -->
-<ul class="nav nav-pills mb-4 border-bottom border-secondary pb-3">
-  <li class="nav-item">
-    <a class="nav-link text-secondary" asp-action="Index">Usuarios del Sistema</a>
-  </li>
-  <li class="nav-item">
-    <a class="nav-link active bg-transparent text-primary fw-bold" asp-action="Propietarios">Directorio de Propietarios</a>
-  </li>
-  <li class="nav-item">
-    <a class="nav-link text-secondary" asp-action="Veterinarios">Personal Veterinario</a>
-  </li>
-</ul>
+<div class="d-flex gap-4 border-bottom border-secondary mb-4 pb-3">
+    <a class="@(ViewContext.RouteData.Values["action"]?.ToString() == "Personas" ? "text-primary fw-bold" : "text-secondary") text-decoration-none"
+       asp-controller="Personas" asp-action="Personas">Personas</a>
+
+    <a class="@(ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "text-primary fw-bold" : "text-secondary") text-decoration-none"
+       asp-controller="Personas" asp-action="Index">Usuarios del Sistema</a>
+
+    <a class="@(ViewContext.RouteData.Values["action"]?.ToString() == "Propietarios" ? "text-primary fw-bold" : "text-secondary") text-decoration-none"
+       asp-controller="Personas" asp-action="Propietarios">Directorio de Propietarios</a>
+
+    <a class="@(ViewContext.RouteData.Values["action"]?.ToString() == "Administradores" ? "text-primary fw-bold" : "text-secondary") text-decoration-none"
+       asp-controller="Personas" asp-action="Administradores">Administradores</a>
+
+    <a class="@(ViewContext.RouteData.Values["action"]?.ToString() == "Veterinarios" ? "text-primary fw-bold" : "text-secondary") text-decoration-none"
+       asp-controller="Personas" asp-action="Veterinarios">Personal Veterinario</a>
+
+    <a class="@(ViewContext.RouteData.Values["action"]?.ToString() == "Encargados" ? "text-primary fw-bold" : "text-secondary") text-decoration-none"
+       asp-controller="Personas" asp-action="Encargados">Encargados de Establo</a>
+</div>
 
 <div class="glass-panel p-4">
     <table class="table table-glass w-100">
@@ -46,9 +53,11 @@
                     <td>@item.Cedula</td>
                     <td>@item.Nombre</td>
                     <td>
-                        @if(item.Descuento)
+                        @if (item.Descuento)
                         {
-                            <span class="badge badge-active"><i class="fa-solid fa-tag me-1"></i> 10% Descuento</span>
+                            <span class="badge badge-active">
+                                <i class="fa-solid fa-tag me-1"></i> 10% Descuento
+                            </span>
                         }
                         else
                         {
@@ -56,17 +65,23 @@
                         }
                     </td>
                     <td class="text-end">
-                        @if(User.IsInRole("2"))
+                        @if (User.IsInRole("2"))
                         {
-                            <form asp-action="EliminarPropietario" method="post" style="display:inline;"
-                                  onsubmit="return confirm('¿Eliminar al propietario @item.Nombre?')">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="codigo" value="@item.Codigo" />
-                                <button type="submit" class="btn btn-sm btn-outline-danger border-0">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
-                            </form>
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-danger border-0"
+                                    onclick="confirmarEliminarPropietario('@item.Codigo', '@item.Nombre')">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
                         }
+                    </td>
+                </tr>
+            }
+
+            @if (!Model.Any())
+            {
+                <tr>
+                    <td colspan="5" class="text-center text-secondary py-5">
+                        No hay propietarios registrados.
                     </td>
                 </tr>
             }
@@ -74,131 +89,103 @@
     </table>
 </div>
 
-<!-- Modal Nuevo Propietario -->
-@if(User.IsInRole("2"))
+@if (User.IsInRole("2"))
 {
-<div class="modal fade" id="nuevoPropietarioModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-xl">
-    <div class="modal-content glass-card border-0">
-      <div class="modal-header border-secondary">
-        <h5 class="modal-title text-white">Registrar Propietario</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <form asp-action="InsertarPropietario" method="post">
-        @Html.AntiForgeryToken()
-        <div class="modal-body">
-          <div class="alert alert-info border-0" style="background: rgba(13, 202, 240, 0.1); color: #0dcaf0;">
-              <i class="fa-solid fa-circle-info me-2"></i> Si la cédula ya está registrada como Persona, los datos personales se ignorarán y solo se le asignará el rol de Propietario.
-          </div>
-          <div class="row g-3">
-              <div class="col-md-3">
-                <label class="form-label text-white">Cédula * (9 dígitos)</label>
-                <input type="text" name="Cedula" class="form-control form-control-glass" required pattern="[0-9]{9}" maxlength="9" placeholder="123456789">
-              </div>
-              <div class="col-md-3">
-                <label class="form-label text-white">Primer Nombre *</label>
-                <input type="text" name="Nombre1" class="form-control form-control-glass" maxlength="50">
-              </div>
-              <div class="col-md-3">
-                <label class="form-label text-white">Segundo Nombre</label>
-                <input type="text" name="Nombre2" class="form-control form-control-glass" maxlength="50">
-              </div>
-              <div class="col-md-3">
-                <label class="form-label text-white">Primer Apellido *</label>
-                <input type="text" name="Apellido1" class="form-control form-control-glass" maxlength="50">
-              </div>
-              <div class="col-md-3">
-                <label class="form-label text-white">Segundo Apellido *</label>
-                <input type="text" name="Apellido2" class="form-control form-control-glass" maxlength="50">
-              </div>
+    <div class="modal fade" id="nuevoPropietarioModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content glass-card border-0">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title text-white">Registrar Propietario</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
 
-              <!-- Dirección cascada -->
-              <div class="col-md-3">
-                  <label class="form-label text-white">Provincia</label>
-                  <select class="form-control form-control-glass" id="selectProvincia" onchange="cargarCantones(this.value,'selectCanton','selectDistrito','selectBarrio')">
-                      <option value="">— Seleccione —</option>
-                      @foreach (var pr in provincias) { <option value="@pr.Id">@pr.Nombre</option> }
-                  </select>
-              </div>
-              <div class="col-md-3">
-                  <label class="form-label text-white">Cantón</label>
-                  <select class="form-control form-control-glass" id="selectCanton" disabled onchange="cargarDistritos(this.value,'selectDistrito','selectBarrio')">
-                      <option value="">— Seleccione provincia —</option>
-                  </select>
-              </div>
-              <div class="col-md-3">
-                  <label class="form-label text-white">Distrito</label>
-                  <select class="form-control form-control-glass" id="selectDistrito" disabled onchange="cargarBarrios(this.value,'selectBarrio')">
-                      <option value="">— Seleccione cantón —</option>
-                  </select>
-              </div>
-              <div class="col-md-3">
-                  <label class="form-label text-white">Barrio</label>
-                  <select name="IdCatBarrio" class="form-control form-control-glass" id="selectBarrio" disabled>
-                      <option value="">— Seleccione distrito —</option>
-                  </select>
-              </div>
+                <form asp-action="InsertarPropietario" method="post">
+                    @Html.AntiForgeryToken()
 
-              <div class="col-12 mt-4">
-                  <div class="form-check">
-                    <input type="checkbox" name="DescuentoProximaFacturacion" value="true" class="form-check-input bg-transparent border-secondary" id="chkDescuento">
-                    <label class="form-check-label text-white" for="chkDescuento">Otorgar 10% de descuento en su próxima factura de inmediato</label>
-                  </div>
-              </div>
-          </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info">
+                            Seleccione una persona que aún no tenga rol asignado.
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-white">Persona *</label>
+                            <select name="Cedula" class="form-control form-control-glass" required>
+                                <option value="">— Seleccione una persona —</option>
+                                @foreach (var p in ViewBag.PersonasSinRol)
+                                {
+                                    <option value="@p.Cedula">
+                                        @p.NombreCompleto (@p.Cedula)
+                                    </option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="form-check mt-3">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   name="DescuentoProximaFacturacion"
+                                   value="true"
+                                   id="checkDescuentoPropietario">
+
+                            <label class="form-check-label text-white" for="checkDescuentoPropietario">
+                                Otorgar 10% de descuento en su próxima factura de inmediato
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer border-secondary">
+                        <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary-custom">Registrar Propietario</button>
+                    </div>
+                </form>
+            </div>
         </div>
-        <div class="modal-footer border-secondary">
-          <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary-custom">Registrar Propietario</button>
-        </div>
-      </form>
     </div>
-  </div>
-</div>
 }
 
+<div class="modal fade" id="eliminarPropietarioModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content glass-card border-0">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-white">
+                    <i class="fa-solid fa-triangle-exclamation text-danger me-2"></i>
+                    Confirmar eliminación
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <p class="text-white mb-0">¿Está seguro que desea eliminar este propietario?</p>
+                <p class="text-secondary mt-2 mb-0">
+                    Propietario seleccionado:
+                    <strong class="text-white" id="propietarioEliminarTexto"></strong>
+                </p>
+            </div>
+
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+
+                <form asp-action="EliminarPropietario" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="codigo" id="codigoPropietarioEliminar" />
+
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fa-solid fa-trash me-1"></i> Eliminar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
-<script>
-    async function cargarCantones(idProvincia, cantonId, distritoId, barrioId) {
-        const canton   = document.getElementById(cantonId);
-        const distrito = document.getElementById(distritoId);
-        const barrio   = document.getElementById(barrioId);
-        canton.disabled = true; distrito.disabled = true; barrio.disabled = true;
-        canton.innerHTML   = '<option value="">Cargando...</option>';
-        distrito.innerHTML = '<option value="">— Seleccione cantón —</option>';
-        barrio.innerHTML   = '<option value="">— Seleccione distrito —</option>';
+    <script>
+        function confirmarEliminarPropietario(codigo, nombre) {
+            document.getElementById('codigoPropietarioEliminar').value = codigo;
+            document.getElementById('propietarioEliminarTexto').innerText = nombre;
 
-        if (!idProvincia) { canton.innerHTML = '<option value="">— Seleccione provincia —</option>'; return; }
-        const data = await fetch(`/Personas/GetCantones?idProvincia=${idProvincia}`).then(r => r.json());
-        canton.innerHTML = '<option value="">— Seleccione —</option>';
-        data.forEach(c => { canton.innerHTML += `<option value="${c.id}">${c.nombre}</option>`; });
-        canton.disabled = false;
-    }
-
-    async function cargarDistritos(idCanton, distritoId, barrioId) {
-        const distrito = document.getElementById(distritoId);
-        const barrio   = document.getElementById(barrioId);
-        distrito.disabled = true; barrio.disabled = true;
-        distrito.innerHTML = '<option value="">Cargando...</option>';
-        barrio.innerHTML   = '<option value="">— Seleccione distrito —</option>';
-
-        if (!idCanton) { distrito.innerHTML = '<option value="">— Seleccione cantón —</option>'; return; }
-        const data = await fetch(`/Personas/GetDistritos?idCanton=${idCanton}`).then(r => r.json());
-        distrito.innerHTML = '<option value="">— Seleccione —</option>';
-        data.forEach(d => { distrito.innerHTML += `<option value="${d.id}">${d.nombre}</option>`; });
-        distrito.disabled = false;
-    }
-
-    async function cargarBarrios(idDistrito, barrioId) {
-        const barrio = document.getElementById(barrioId);
-        barrio.disabled = true;
-        barrio.innerHTML = '<option value="">Cargando...</option>';
-
-        if (!idDistrito) { barrio.innerHTML = '<option value="">— Seleccione distrito —</option>'; return; }
-        const data = await fetch(`/Personas/GetBarrios?idDistrito=${idDistrito}`).then(r => r.json());
-        barrio.innerHTML = '<option value="">— Seleccione —</option>';
-        data.forEach(b => { barrio.innerHTML += `<option value="${b.id}">${b.nombre}</option>`; });
-        barrio.disabled = false;
-    }
-</script>
+            const modal = new bootstrap.Modal(document.getElementById('eliminarPropietarioModal'));
+            modal.show();
+        }
+    </script>
 }

@@ -3,16 +3,17 @@ using Microsoft.AspNetCore.Mvc;
 using ProyectoHipodromoGrupoF.Logica;
 using ProyectoHipodromoGrupoF.Modelo;
 using System;
+using System.Linq;
 
 namespace ProyectoHipodromoGrupoF.UI.Controllers
 {
     [Authorize(Roles = "2")]
     public class PersonasController : Controller
     {
-        private readonly UsuarioService     _usuarioService;
-        private readonly PersonasService    _personasService;
+        private readonly UsuarioService _usuarioService;
+        private readonly PersonasService _personasService;
         private readonly VeterinarioService _veterinarioService;
-        private readonly CatalogosService   _catalogosService;
+        private readonly CatalogosService _catalogosService;
 
         public PersonasController(
             UsuarioService usuarioService,
@@ -20,10 +21,15 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
             VeterinarioService veterinarioService,
             CatalogosService catalogosService)
         {
-            _usuarioService     = usuarioService;
-            _personasService    = personasService;
+            _usuarioService = usuarioService;
+            _personasService = personasService;
             _veterinarioService = veterinarioService;
-            _catalogosService   = catalogosService;
+            _catalogosService = catalogosService;
+        }
+
+        private string ObtenerUsuarioActual()
+        {
+            return User.Identity?.Name ?? "usuario_desconocido";
         }
 
         // ─── USUARIOS ────────────────────────────────────────────────────────────
@@ -31,65 +37,104 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
         public IActionResult Index()
         {
             ViewBag.Personas = _personasService.ListarPersonas();
-            ViewBag.Roles    = _catalogosService.ListarRoles();
+            ViewBag.PersonasConRol = _personasService.ListarPersonasConRol();
+            ViewBag.Roles = _catalogosService.ListarRoles();
             ViewBag.Provincias = _catalogosService.ListarProvincias();
             return View(_usuarioService.ListarUsuarios());
         }
 
-        [HttpPost][ValidateAntiForgeryToken]
-        public IActionResult InsertarUsuario(Usuario usuario, Persona persona)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult InsertarUsuario(Usuario usuario)
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(usuario.Cedula))
+                {
+                    TempData["Error"] = "Debe seleccionar una persona.";
+                    return RedirectToAction("Index");
+                }
+
+                var usuarioExistente = _usuarioService.ListarUsuarios()
+                    .FirstOrDefault(u => u.Cedula == usuario.Cedula);
+
+                if (usuarioExistente != null)
+                {
+                    TempData["Error"] = "Esta persona ya tiene un usuario registrado en el sistema.";
+                    return RedirectToAction("Index");
+                }
+
                 if (string.IsNullOrWhiteSpace(usuario.Contrasena))
-                { TempData["Error"] = "La contraseña es obligatoria."; return RedirectToAction("Index"); }
-
-                var existente = _personasService.ObtenerPersonaPorCedula(usuario.Cedula);
-                if (existente == null)
                 {
-                    persona.Cedula = usuario.Cedula;
-                    _personasService.InsertarPersona(persona);
+                    TempData["Error"] = "La contraseña es obligatoria.";
+                    return RedirectToAction("Index");
                 }
 
-                _usuarioService.InsertarUsuario(usuario);
-                
-                // Sincronización automática de roles para evitar FK constraints (Ej: Caballo requiere Propietario)
-                if (usuario.IdCatRol == 1)
+                var personaConRol = _personasService.ListarPersonasConRol()
+                    .FirstOrDefault(p => p.Cedula == usuario.Cedula);
+
+                if (personaConRol == null)
                 {
-                    var propExistente = _personasService.ListarPropietarios().Find(p => p.Cedula == usuario.Cedula);
-                    if (propExistente == null)
-                    {
-                        _personasService.InsertarPropietario(new Propietario { Cedula = usuario.Cedula, DescuentoProximaFacturacion = false });
-                    }
-                }
-                else if (usuario.IdCatRol == 3)
-                {
-                    var encExistente = _personasService.ListarEncargados().Find(e => e.Cedula == usuario.Cedula);
-                    if (encExistente == null)
-                    {
-                        _personasService.InsertarEncargado(new EncargadoEstablo { Cedula = usuario.Cedula });
-                    }
+                    TempData["Error"] = "La persona seleccionada no tiene un rol definido.";
+                    return RedirectToAction("Index");
                 }
 
-                TempData["Exito"] = "Usuario creado correctamente.";
+                usuario.Nombre = personaConRol.NombreUsuario;
+                usuario.IdCatRol = personaConRol.IdCatRol;
+
+                var usuarioActual = User.Identity?.Name ?? "usuario_desconocido";
+
+                _usuarioService.InsertarUsuario(usuario, usuarioActual);
+
+                TempData["Exito"] = $"Usuario \"{usuario.Nombre}\" creado correctamente.";
             }
-            catch (Exception ex) { TempData["Error"] = $"Error al registrar usuario: {ex.Message}"; }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error al registrar usuario: {ex.Message}";
+            }
+
             return RedirectToAction("Index");
         }
 
-        [HttpPost][ValidateAntiForgeryToken]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult ActualizarUsuario(Usuario usuario)
         {
-            try { _usuarioService.ActualizarUsuario(usuario); TempData["Exito"] = "Usuario actualizado."; }
-            catch (Exception ex) { TempData["Error"] = $"Error: {ex.Message}"; }
+            try
+            {
+                var usuarioActual = ObtenerUsuarioActual();
+                _usuarioService.ActualizarUsuario(usuario, usuarioActual);
+                TempData["Exito"] = "Usuario actualizado.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error: {ex.Message}";
+            }
+
             return RedirectToAction("Index");
         }
 
-        [HttpPost][ValidateAntiForgeryToken]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult EliminarUsuario(string codigo)
         {
-            try { _usuarioService.EliminarUsuario(codigo); TempData["Exito"] = "Usuario eliminado."; }
-            catch (Exception ex) { TempData["Error"] = $"Error: {ex.Message}"; }
+            try
+            {
+                if (string.IsNullOrWhiteSpace(codigo))
+                {
+                    TempData["Error"] = "Debe seleccionar un usuario para eliminar.";
+                    return RedirectToAction("Index");
+                }
+
+                var usuarioActual = ObtenerUsuarioActual();
+                _usuarioService.EliminarUsuario(codigo, usuarioActual);
+                TempData["Exito"] = "Usuario eliminado.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error: {ex.Message}";
+            }
+
             return RedirectToAction("Index");
         }
 
@@ -99,52 +144,93 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
         {
             ViewBag.Provincias = _catalogosService.ListarProvincias();
             ViewBag.TiposTelefono = _catalogosService.ListarTiposTelefono();
-            ViewBag.TiposCorreo   = _catalogosService.ListarTiposCorreo();
+            ViewBag.TiposCorreo = _catalogosService.ListarTiposCorreo();
             return View(_personasService.ListarPersonas());
         }
 
-        [HttpPost][ValidateAntiForgeryToken]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult InsertarPersona(
             Persona persona,
             [FromForm] string[] telefonos,
-            [FromForm] int[]    tiposTelefono,
+            [FromForm] int[] tiposTelefono,
             [FromForm] string[] correos,
-            [FromForm] int[]    tiposCorreo)
+            [FromForm] int[] tiposCorreo)
         {
             try
             {
-                _personasService.InsertarPersona(persona);
-                // Insertar teléfonos
+                var usuarioActual = ObtenerUsuarioActual();
+                _personasService.InsertarPersona(persona, usuarioActual);
+
                 for (int i = 0; i < telefonos.Length; i++)
+                {
                     if (!string.IsNullOrWhiteSpace(telefonos[i]))
+                    {
                         _personasService.InsertarTelefonoPersona(persona.Cedula, telefonos[i], tiposTelefono[i]);
-                // Insertar correos
+                    }
+                }
+
                 for (int i = 0; i < correos.Length; i++)
+                {
                     if (!string.IsNullOrWhiteSpace(correos[i]))
+                    {
                         _personasService.InsertarCorreoPersona(persona.Cedula, correos[i], tiposCorreo[i]);
-                TempData["Exito"] = "Persona registrada correctamente.";
+                    }
+                }
+
+                TempData["Exito"] = $"Persona \"{persona.Nombre1}\" registrada correctamente.";
             }
-            catch (Exception ex) { TempData["Error"] = $"Error: {ex.Message}"; }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error: {ex.Message}";
+            }
+
             return RedirectToAction("Personas");
         }
 
-        [HttpPost][ValidateAntiForgeryToken]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult ActualizarPersona(Persona persona)
         {
-            try { _personasService.ActualizarPersona(persona); TempData["Exito"] = "Persona actualizada."; }
-            catch (Exception ex) { TempData["Error"] = $"Error: {ex.Message}"; }
+            try
+            {
+                var usuarioActual = ObtenerUsuarioActual();
+                _personasService.ActualizarPersona(persona, usuarioActual);
+                TempData["Exito"] = "Persona actualizada.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error: {ex.Message}";
+            }
+
             return RedirectToAction("Personas");
         }
 
-        [HttpPost][ValidateAntiForgeryToken]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult EliminarPersona(string cedula)
         {
-            try { _personasService.EliminarPersona(cedula); TempData["Exito"] = "Persona eliminada."; }
-            catch (Exception ex) { TempData["Error"] = $"Error: {ex.Message}"; }
+            try
+            {
+                if (string.IsNullOrWhiteSpace(cedula))
+                {
+                    TempData["Error"] = "Debe seleccionar una persona para eliminar.";
+                    return RedirectToAction("Personas");
+                }
+
+                var usuarioActual = ObtenerUsuarioActual();
+                _personasService.EliminarPersona(cedula, usuarioActual);
+                TempData["Exito"] = "Persona eliminada.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error: {ex.Message}";
+            }
+
             return RedirectToAction("Personas");
         }
 
-        // ─── CASCADA GEOGRAFÍA (JSON para AJAX) ──────────────────────────────────
+        // ─── CASCADA GEOGRÁFICA ──────────────────────────────────────────────────
 
         [HttpGet]
         public IActionResult GetCantones(int idProvincia) =>
@@ -163,57 +249,161 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
         public IActionResult Propietarios()
         {
             var propietarios = _personasService.ListarPropietarios();
-            var personas     = _personasService.ListarPersonas();
-            var vista = from prop in propietarios
-                        join per in personas on prop.Cedula equals per.Cedula
+            var personas = _personasService.ListarPersonas();
+
+            var vista = from propietario in propietarios
+                        join persona in personas on propietario.Cedula equals persona.Cedula
                         select new
                         {
-                            Codigo    = prop.Codigo,
-                            Cedula    = prop.Cedula,
-                            Nombre    = $"{per.Nombre1} {per.Apellido1}".Trim(),
-                            Descuento = prop.DescuentoProximaFacturacion
+                            Codigo = propietario.Codigo,
+                            Cedula = propietario.Cedula,
+                            Nombre = $"{persona.Nombre1} {persona.Apellido1}".Trim(),
+                            Descuento = propietario.DescuentoProximaFacturacion
                         };
+
             ViewBag.Personas = personas;
-            ViewBag.Provincias = _catalogosService.ListarProvincias();
+            ViewBag.PersonasSinRol = _personasService.ListarPersonasSinRol();
             return View(vista);
         }
 
-        [HttpPost][ValidateAntiForgeryToken]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult InsertarPropietario(Propietario propietario, Persona persona)
         {
             try
             {
-                // Verificamos si la persona ya existe
-                var existente = _personasService.ObtenerPersonaPorCedula(propietario.Cedula);
-                if (existente == null)
+                var usuarioActual = ObtenerUsuarioActual();
+
+                var personaExistente = _personasService.ObtenerPersonaPorCedula(propietario.Cedula);
+                if (personaExistente == null)
                 {
-                    // Si no existe, usamos los datos del form para crearla
                     persona.Cedula = propietario.Cedula;
-                    _personasService.InsertarPersona(persona);
+                    _personasService.InsertarPersona(persona, usuarioActual);
                 }
 
                 propietario.DescuentoProximaFacturacion = Request.Form["DescuentoProximaFacturacion"] == "true";
-                _personasService.InsertarPropietario(propietario);
+                _personasService.InsertarPropietario(propietario, usuarioActual);
+
                 TempData["Exito"] = "Propietario registrado exitosamente.";
             }
-            catch (Exception ex) { TempData["Error"] = $"Error al registrar propietario: {ex.Message}"; }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error al registrar propietario: {ex.Message}";
+            }
+
             return RedirectToAction("Propietarios");
         }
 
-        [HttpPost][ValidateAntiForgeryToken]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult ActualizarPropietario(Propietario propietario)
         {
-            try { _personasService.ActualizarPropietario(propietario); TempData["Exito"] = "Propietario actualizado."; }
-            catch (Exception ex) { TempData["Error"] = $"Error: {ex.Message}"; }
+            try
+            {
+                var usuarioActual = ObtenerUsuarioActual();
+                _personasService.ActualizarPropietario(propietario, usuarioActual);
+                TempData["Exito"] = "Propietario actualizado.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error: {ex.Message}";
+            }
+
             return RedirectToAction("Propietarios");
         }
 
-        [HttpPost][ValidateAntiForgeryToken]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult EliminarPropietario(string codigo)
         {
-            try { _personasService.EliminarPropietario(codigo); TempData["Exito"] = "Propietario eliminado."; }
-            catch (Exception ex) { TempData["Error"] = $"Error: {ex.Message}"; }
+            try
+            {
+                if (string.IsNullOrWhiteSpace(codigo))
+                {
+                    TempData["Error"] = "Debe seleccionar un propietario para eliminar.";
+                    return RedirectToAction("Propietarios");
+                }
+
+                var usuarioActual = ObtenerUsuarioActual();
+                _personasService.EliminarPropietario(codigo, usuarioActual);
+                TempData["Exito"] = "Propietario eliminado.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error: {ex.Message}";
+            }
+
             return RedirectToAction("Propietarios");
+        }
+
+        // ─── ADMINISTRADORES ─────────────────────────────────────────────────────
+
+        public IActionResult Administradores()
+        {
+            ViewBag.Personas = _personasService.ListarPersonas();
+            ViewBag.PersonasSinRol = _personasService.ListarPersonasSinRol();
+
+            return View(_personasService.ListarAdministradores());
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult InsertarAdministrador(Administrador administrador)
+        {
+            try
+            {
+                var usuarioActual = ObtenerUsuarioActual();
+                _personasService.InsertarAdministrador(administrador, usuarioActual);
+                TempData["Exito"] = "Administrador registrado.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error: {ex.Message}";
+            }
+
+            return RedirectToAction("Administradores");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult ActualizarAdministrador(Administrador administrador)
+        {
+            try
+            {
+                var usuarioActual = ObtenerUsuarioActual();
+                _personasService.ActualizarAdministrador(administrador, usuarioActual);
+                TempData["Exito"] = "Administrador actualizado.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error: {ex.Message}";
+            }
+
+            return RedirectToAction("Administradores");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult EliminarAdministrador(string codigo)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(codigo))
+                {
+                    TempData["Error"] = "Debe seleccionar un administrador para eliminar.";
+                    return RedirectToAction("Administradores");
+                }
+
+                var usuarioActual = ObtenerUsuarioActual();
+                _personasService.EliminarAdministrador(codigo, usuarioActual);
+                TempData["Exito"] = "Administrador eliminado.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error: {ex.Message}";
+            }
+
+            return RedirectToAction("Administradores");
         }
 
         // ─── VETERINARIOS ────────────────────────────────────────────────────────
@@ -221,54 +411,136 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
         public IActionResult Veterinarios()
         {
             ViewBag.Personas = _personasService.ListarPersonas();
+            ViewBag.PersonasSinRol = _personasService.ListarPersonasSinRol();
             return View(_veterinarioService.ListarVeterinarios());
         }
 
-        [HttpPost][ValidateAntiForgeryToken]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult InsertarVeterinario(Veterinario veterinario)
         {
-            try { _veterinarioService.InsertarVeterinario(veterinario); TempData["Exito"] = "Veterinario registrado."; }
-            catch (Exception ex) { TempData["Error"] = $"Error: {ex.Message}"; }
+            try
+            {
+                var usuarioActual = ObtenerUsuarioActual();
+                _veterinarioService.InsertarVeterinario(veterinario, usuarioActual);
+                TempData["Exito"] = "Veterinario registrado.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error: {ex.Message}";
+            }
+
             return RedirectToAction("Veterinarios");
         }
 
-        [HttpPost][ValidateAntiForgeryToken]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult ActualizarVeterinario(Veterinario veterinario)
         {
-            try { _veterinarioService.ActualizarVeterinario(veterinario); TempData["Exito"] = "Veterinario actualizado."; }
-            catch (Exception ex) { TempData["Error"] = $"Error: {ex.Message}"; }
+            try
+            {
+                var usuarioActual = ObtenerUsuarioActual();
+                _veterinarioService.ActualizarVeterinario(veterinario, usuarioActual);
+                TempData["Exito"] = "Veterinario actualizado.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error: {ex.Message}";
+            }
+
             return RedirectToAction("Veterinarios");
         }
 
-        [HttpPost][ValidateAntiForgeryToken]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult EliminarVeterinario(string codigo)
         {
-            try { _veterinarioService.EliminarVeterinario(codigo); TempData["Exito"] = "Veterinario eliminado."; }
-            catch (Exception ex) { TempData["Error"] = $"Error: {ex.Message}"; }
+            try
+            {
+                if (string.IsNullOrWhiteSpace(codigo))
+                {
+                    TempData["Error"] = "Debe seleccionar un veterinario para eliminar.";
+                    return RedirectToAction("Veterinarios");
+                }
+
+                var usuarioActual = ObtenerUsuarioActual();
+                _veterinarioService.EliminarVeterinario(codigo, usuarioActual);
+                TempData["Exito"] = "Veterinario eliminado.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error: {ex.Message}";
+            }
+
             return RedirectToAction("Veterinarios");
         }
 
-        // ─── ENCARGADOS ───────────────────────────────────────────────────────────
+        // ─── ENCARGADOS DE ESTABLO ───────────────────────────────────────────────
 
         public IActionResult Encargados()
         {
             ViewBag.Personas = _personasService.ListarPersonas();
+            ViewBag.PersonasSinRol = _personasService.ListarPersonasSinRol();
             return View(_personasService.ListarEncargados());
         }
 
-        [HttpPost][ValidateAntiForgeryToken]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult InsertarEncargado(EncargadoEstablo encargado)
         {
-            try { _personasService.InsertarEncargado(encargado); TempData["Exito"] = "Encargado registrado."; }
-            catch (Exception ex) { TempData["Error"] = $"Error: {ex.Message}"; }
+            try
+            {
+                var usuarioActual = ObtenerUsuarioActual();
+                _personasService.InsertarEncargado(encargado, usuarioActual);
+                TempData["Exito"] = "Encargado registrado.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error: {ex.Message}";
+            }
+
             return RedirectToAction("Encargados");
         }
 
-        [HttpPost][ValidateAntiForgeryToken]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult ActualizarEncargado(EncargadoEstablo encargado)
+        {
+            try
+            {
+                var usuarioActual = ObtenerUsuarioActual();
+                _personasService.ActualizarEncargado(encargado, usuarioActual);
+                TempData["Exito"] = "Encargado actualizado.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error: {ex.Message}";
+            }
+
+            return RedirectToAction("Encargados");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult EliminarEncargado(string codigo)
         {
-            try { _personasService.EliminarEncargado(codigo); TempData["Exito"] = "Encargado eliminado."; }
-            catch (Exception ex) { TempData["Error"] = $"Error: {ex.Message}"; }
+            try
+            {
+                if (string.IsNullOrWhiteSpace(codigo))
+                {
+                    TempData["Error"] = "Debe seleccionar un encargado para eliminar.";
+                    return RedirectToAction("Encargados");
+                }
+
+                var usuarioActual = ObtenerUsuarioActual();
+                _personasService.EliminarEncargado(codigo, usuarioActual);
+                TempData["Exito"] = "Encargado eliminado.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error: {ex.Message}";
+            }
+
             return RedirectToAction("Encargados");
         }
     }

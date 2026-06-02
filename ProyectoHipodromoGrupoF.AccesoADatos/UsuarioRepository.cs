@@ -14,35 +14,45 @@ namespace ProyectoHipodromoGrupoF.AccesoADatos
             _conexionDB = conexionDB;
         }
 
-        // ─── AUTENTICACIÓN ────────────────────────────────────────────────────────
+        private static void EstablecerUsuarioActual(NpgsqlConnection conexion, string usuarioActual)
+        {
+            using var comandoUsuario = new NpgsqlCommand(
+                "CALL public.establecer_usuario_actual($1)", conexion);
 
-        /// <summary>Valida usuario comparando contraseña en texto plano.</summary>
+            comandoUsuario.Parameters.AddWithValue(usuarioActual ?? "usuario_desconocido");
+            comandoUsuario.ExecuteNonQuery();
+        }
+
+        // ─── AUTENTICACIÓN ───────────────────────────────────────────────────────
+
         public Usuario? ValidarUsuario(string nombreUsuario, string contrasena)
         {
             using var conexion = _conexionDB.ObtenerConexion();
             using var comando = new NpgsqlCommand("SELECT * FROM public.listar_usuario()", conexion);
             using var lector = comando.ExecuteReader();
+
             while (lector.Read())
             {
                 var usernameDB = lector.GetString(2);
-                var passDB     = lector.GetString(3);
+                var passDB = lector.GetString(3);
 
                 if (usernameDB == nombreUsuario && passDB == contrasena)
                 {
                     return new Usuario
                     {
-                        Codigo     = lector.GetString(0),
-                        Cedula     = lector.GetString(1),
-                        Nombre     = usernameDB,
-                        Contrasena = string.Empty, // Nunca retornar hash al cliente
-                        IdCatRol   = lector.GetInt32(4)
+                        Codigo = lector.GetString(0),
+                        Cedula = lector.GetString(1),
+                        Nombre = usernameDB,
+                        Contrasena = string.Empty,
+                        IdCatRol = lector.GetInt32(4)
                     };
                 }
             }
+
             return null;
         }
 
-        // ─── CRUD ─────────────────────────────────────────────────────────────────
+        // ─── USUARIOS ────────────────────────────────────────────────────────────
 
         public List<Usuario> ListarUsuarios()
         {
@@ -50,25 +60,30 @@ namespace ProyectoHipodromoGrupoF.AccesoADatos
             using var conexion = _conexionDB.ObtenerConexion();
             using var comando = new NpgsqlCommand("SELECT * FROM public.listar_usuario()", conexion);
             using var lector = comando.ExecuteReader();
+
             while (lector.Read())
             {
                 usuarios.Add(new Usuario
                 {
-                    Codigo     = lector.GetString(0),
-                    Cedula     = lector.GetString(1),
-                    Nombre     = lector.GetString(2),
+                    Codigo = lector.GetString(0),
+                    Cedula = lector.GetString(1),
+                    Nombre = lector.GetString(2),
                     Contrasena = string.Empty,
-                    IdCatRol   = lector.GetInt32(4)
+                    IdCatRol = lector.GetInt32(4)
                 });
             }
+
             return usuarios;
         }
 
-        public void InsertarUsuario(Usuario usuario)
+        public void InsertarUsuario(Usuario usuario, string usuarioActual)
         {
             using var conexion = _conexionDB.ObtenerConexion();
+            EstablecerUsuarioActual(conexion, usuarioActual);
+
             using var comando = new NpgsqlCommand(
                 "CALL public.insertar_usuario($1,$2,$3,$4)", conexion);
+
             comando.Parameters.AddWithValue(usuario.Cedula);
             comando.Parameters.AddWithValue(usuario.Nombre);
             comando.Parameters.AddWithValue(usuario.Contrasena);
@@ -76,16 +91,18 @@ namespace ProyectoHipodromoGrupoF.AccesoADatos
             comando.ExecuteNonQuery();
         }
 
-        public void ActualizarUsuario(Usuario usuario)
+        public void ActualizarUsuario(Usuario usuario, string usuarioActual)
         {
             using var conexion = _conexionDB.ObtenerConexion();
-            // Si llega contraseña vacía, mantener la contraseña actual de BD
+            EstablecerUsuarioActual(conexion, usuarioActual);
+
             var contrasena = string.IsNullOrWhiteSpace(usuario.Contrasena)
-                             ? ObtenerHashActual(usuario.Codigo)
-                             : usuario.Contrasena;
+                ? ObtenerHashActual(usuario.Codigo)
+                : usuario.Contrasena;
 
             using var comando = new NpgsqlCommand(
                 "CALL public.actualizar_usuario($1,$2,$3,$4,$5)", conexion);
+
             comando.Parameters.AddWithValue(usuario.Codigo);
             comando.Parameters.AddWithValue(usuario.Cedula);
             comando.Parameters.AddWithValue(usuario.Nombre);
@@ -94,10 +111,14 @@ namespace ProyectoHipodromoGrupoF.AccesoADatos
             comando.ExecuteNonQuery();
         }
 
-        public void EliminarUsuario(string codigo)
+        public void EliminarUsuario(string codigo, string usuarioActual)
         {
             using var conexion = _conexionDB.ObtenerConexion();
-            using var comando = new NpgsqlCommand("CALL public.eliminar_usuario($1)", conexion);
+            EstablecerUsuarioActual(conexion, usuarioActual);
+
+            using var comando = new NpgsqlCommand(
+                "CALL public.eliminar_usuario($1)", conexion);
+
             comando.Parameters.AddWithValue(codigo);
             comando.ExecuteNonQuery();
         }
@@ -105,27 +126,25 @@ namespace ProyectoHipodromoGrupoF.AccesoADatos
         private string ObtenerHashActual(string codigoUsuario)
         {
             using var conexion = _conexionDB.ObtenerConexion();
-            using var cmd = new NpgsqlCommand(
+            using var comando = new NpgsqlCommand(
                 "SELECT * FROM public.obtener_contrasena_usuario($1)", conexion);
-            cmd.Parameters.AddWithValue(codigoUsuario);
-            var result = cmd.ExecuteScalar();
-            return result?.ToString() ?? string.Empty;
+
+            comando.Parameters.AddWithValue(codigoUsuario);
+
+            var resultado = comando.ExecuteScalar();
+            return resultado?.ToString() ?? string.Empty;
         }
 
-        // ─── PROPIETARIO LOOKUP ───────────────────────────────────────────────────
-
-        /// <summary>
-        /// Dado la cédula de un usuario con rol Propietario, devuelve su código de propietario
-        /// (ej. "pro0001"). Retorna null si no existe registro de propietario para esa cédula.
-        /// </summary>
         public string? ObtenerCodigoPropietarioPorCedula(string cedula)
         {
             using var conexion = _conexionDB.ObtenerConexion();
-            using var cmd = new NpgsqlCommand(
+            using var comando = new NpgsqlCommand(
                 "SELECT public.obtener_codigo_propietario_por_cedula($1)", conexion);
-            cmd.Parameters.AddWithValue(cedula);
-            var result = cmd.ExecuteScalar();
-            return result == DBNull.Value || result == null ? null : result.ToString();
+
+            comando.Parameters.AddWithValue(cedula);
+
+            var resultado = comando.ExecuteScalar();
+            return resultado == DBNull.Value || resultado == null ? null : resultado.ToString();
         }
     }
 }

@@ -115,21 +115,24 @@
             </div>
             <div class="mb-3">
                 <label class="form-label text-white">Caballo *</label>
-                <select name="CodigoCaballo" class="form-control form-control-glass" required id="selectCaballoInsc"
-                        onchange="verificarCertificacion(this.value)">
-                    <option value="">— Seleccione un caballo —</option>
-                    @foreach (var c in caballos) {
-                        var tieneCert = certificaciones.ContainsKey(c.Codigo) && certificaciones[c.Codigo];
-                        var esApto = c.IdCatEstadoCaballo <= 3; // 1=Perfecto, 2=Bueno, 3=Regular
-                        if (tieneCert && esApto) {
-                            <option value="@c.Codigo">@c.Nombre (@c.Codigo)</option>
-                        } else {
-                            var razon = !esApto ? "Salud inactiva" : "Sin certificación";
-                            if (!esApto && !tieneCert) razon = "Sin cert. y mala salud";
-                            <option value="@c.Codigo" disabled class="text-danger">@c.Nombre (@c.Codigo) — @razon</option>
-                        }
-                    }
-                </select>
+                        <select name="CodigoCaballo"
+                                class="form-control form-control-glass"
+                                required
+                                onchange="validarCaballoInscripcion(this)">
+                            <option value="">— Seleccione un caballo —</option>
+
+                            @foreach (var c in ViewBag.CaballosInscripcion)
+                            {
+                                <option value="@c.Codigo"
+                                        data-valido="@c.PuedeInscribirse.ToString().ToLower()"
+                                        data-motivo="@c.Motivo"
+                                        class="@(c.PuedeInscribirse ? "" : "text-danger")">
+                                    @c.Nombre (@c.Codigo) @(c.PuedeInscribirse ? "" : $"— {c.Motivo}")
+                                </option>
+                            }
+                        </select>
+
+                        <input type="hidden" id="caballoValidoInscripcion" value="false">
             </div>
             <div class="mb-3">
                 <label class="form-label text-white">Fecha de inscripción</label>
@@ -302,5 +305,23 @@
         const el = document.getElementById(id);
         if (el) el.value = val;
     }
+
+        function validarCaballoInscripcion(select) {
+            const option = select.options[select.selectedIndex];
+
+            if (!option.value) {
+                document.getElementById('caballoValidoInscripcion').value = 'false';
+                return;
+            }
+
+            const valido = option.dataset.valido === 'true';
+
+            document.getElementById('caballoValidoInscripcion').value = valido ? 'true' : 'false';
+
+            if (!valido) {
+                alert('Este caballo no puede inscribirse: ' + option.dataset.motivo);
+                select.value = '';
+            }
+        }
 </script>
 }

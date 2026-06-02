@@ -1,3 +1,6 @@
+using ProyectoHipodromoGrupoF.AccesoADatos;
+using ProyectoHipodromoGrupoF.Logica;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews(options =>
@@ -18,6 +21,9 @@ builder.Services.AddSession(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
 });
+
+builder.Services.AddScoped<CatalogoRepository>();
+builder.Services.AddScoped<CatalogoService>();
 
 // Capa AccesoADatos
 builder.Services.AddSingleton<ProyectoHipodromoGrupoF.AccesoADatos.ConexionDB>();

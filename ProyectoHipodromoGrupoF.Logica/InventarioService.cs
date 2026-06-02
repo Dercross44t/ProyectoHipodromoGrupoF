@@ -18,14 +18,14 @@ namespace ProyectoHipodromoGrupoF.Logica
         public List<Suministro> ListarSuministros() =>
             _inventarioRepository.ListarSuministros();
 
-        public void InsertarSuministro(Suministro suministro) =>
-            _inventarioRepository.InsertarSuministro(suministro);
+        public void InsertarSuministro(Suministro suministro, string usuarioActual) =>
+    _inventarioRepository.InsertarSuministro(suministro, usuarioActual);
 
-        public void ActualizarSuministro(Suministro suministro) =>
-            _inventarioRepository.ActualizarSuministro(suministro);
+        public void ActualizarSuministro(Suministro suministro, string usuarioActual) =>
+            _inventarioRepository.ActualizarSuministro(suministro, usuarioActual);
 
-        public void EliminarSuministro(string codigo) =>
-            _inventarioRepository.EliminarSuministro(codigo);
+        public void EliminarSuministro(string codigo, string usuarioActual) =>
+            _inventarioRepository.EliminarSuministro(codigo, usuarioActual);
 
         // ─── ALIMENTACIÓN ────────────────────────────────────────────────────────
 

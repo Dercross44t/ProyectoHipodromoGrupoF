@@ -18,12 +18,8 @@ namespace ProyectoHipodromoGrupoF.Logica
             _inscripcionesRepository.ListarInscripciones();
 
         public List<Inscripcion> ListarInscripcionesPorPropietario(string codigoPropietario) =>
-            _inscripcionesRepository.ListarInscripcionesPorPropietario(codigoPropietario);
+    _inscripcionesRepository.ListarInscripcionesPorPropietario(codigoPropietario);
 
-        /// <summary>
-        /// Valida la certificación veterinaria antes de inscribir.
-        /// Si el caballo no tiene certificación vigente, lanza una excepción.
-        /// </summary>
         public void InsertarInscripcion(Inscripcion inscripcion)
         {
             if (!_inscripcionesRepository.TieneCertificacionVigente(inscripcion.CodigoCaballo))
@@ -34,6 +30,9 @@ namespace ProyectoHipodromoGrupoF.Logica
             inscripcion.IdCatEstadoInscripcion = 1; // Estado: Pendiente de validación
             _inscripcionesRepository.InsertarInscripcion(inscripcion);
         }
+
+        public List<CaballoInscripcion> ListarCaballosParaInscripcion() =>
+    _inscripcionesRepository.ListarCaballosParaInscripcion();
 
         public void ActualizarInscripcion(Inscripcion inscripcion) =>
             _inscripcionesRepository.ActualizarInscripcion(inscripcion);

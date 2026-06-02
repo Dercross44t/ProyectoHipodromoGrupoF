@@ -13,45 +13,61 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
         private readonly EquinosService       _equinosService;
         private readonly EventosService       _eventosService;
         private readonly CatalogosService     _catalogosService;
+        private readonly FacturacionService _facturacionService;
 
         public InscripcionesController(
             InscripcionesService inscripcionesService,
             EquinosService equinosService,
             EventosService eventosService,
-            CatalogosService catalogosService)
+            CatalogosService catalogosService,
+            FacturacionService facturacionService)
         {
             _inscripcionesService = inscripcionesService;
             _equinosService       = equinosService;
             _eventosService       = eventosService;
             _catalogosService     = catalogosService;
+            _facturacionService = facturacionService;
         }
 
         public IActionResult Index()
         {
-            // Dropdowns
-            ViewBag.Eventos            = _eventosService.ListarEventos();
+            ViewBag.Eventos = _eventosService.ListarEventos();
             ViewBag.EstadosInscripcion = _catalogosService.ListarEstadosInscripcion();
 
             List<Caballo> caballos;
-            // Caballos: Propietario solo ve los suyos
+
             if (User.IsInRole("1"))
             {
                 var codigoPropietario = User.FindFirst("CodigoPropietario")?.Value ?? string.Empty;
+
                 caballos = _equinosService.ListarCaballosPorPropietario(codigoPropietario);
                 ViewBag.Caballos = caballos;
-                
-                var certsProp = new System.Collections.Generic.Dictionary<string, bool>();
-                foreach (var c in caballos) certsProp[c.Codigo] = _inscripcionesService.TieneCertificacionVigente(c.Codigo);
+
+                var todosCaballosInscripcion = _inscripcionesService.ListarCaballosParaInscripcion();
+
+                ViewBag.CaballosInscripcion = todosCaballosInscripcion
+                    .Where(ci => caballos.Any(c => c.Codigo == ci.Codigo))
+                    .ToList();
+
+                var certsProp = new Dictionary<string, bool>();
+
+                foreach (var c in caballos)
+                    certsProp[c.Codigo] = _inscripcionesService.TieneCertificacionVigente(c.Codigo);
+
                 ViewBag.Certificaciones = certsProp;
-                
+
                 return View(_inscripcionesService.ListarInscripcionesPorPropietario(codigoPropietario));
             }
 
             caballos = _equinosService.ListarCaballos();
             ViewBag.Caballos = caballos;
-            
-            var certs = new System.Collections.Generic.Dictionary<string, bool>();
-            foreach (var c in caballos) certs[c.Codigo] = _inscripcionesService.TieneCertificacionVigente(c.Codigo);
+            ViewBag.CaballosInscripcion = _inscripcionesService.ListarCaballosParaInscripcion();
+
+            var certs = new Dictionary<string, bool>();
+
+            foreach (var c in caballos)
+                certs[c.Codigo] = _inscripcionesService.TieneCertificacionVigente(c.Codigo);
+
             ViewBag.Certificaciones = certs;
 
             return View(_inscripcionesService.ListarInscripciones());
@@ -64,6 +80,22 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
             {
                 inscripcion.IdCatEstadoInscripcion = 1; // Forzar a "Pendiente"
                 inscripcion.Fecha = DateTime.Today;
+
+                var caballos = _inscripcionesService.ListarCaballosParaInscripcion();
+                var caballo = caballos.FirstOrDefault(c => c.Codigo == inscripcion.CodigoCaballo);
+
+                if (caballo == null)
+                {
+                    TempData["Error"] = "El caballo seleccionado no existe.";
+                    return RedirectToAction("Index");
+                }
+
+                if (!caballo.PuedeInscribirse)
+                {
+                    TempData["Error"] = $"El caballo no puede inscribirse: {caballo.Motivo}";
+                    return RedirectToAction("Index");
+                }
+
                 _inscripcionesService.InsertarInscripcion(inscripcion);
                 TempData["Exito"] = "Inscripción registrada correctamente.";
             }
@@ -79,16 +111,45 @@ namespace ProyectoHipodromoGrupoF.UI.Controllers
             return RedirectToAction("Index");
         }
 
-        [HttpPost][ValidateAntiForgeryToken]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         [Authorize(Roles = "2")]
         public IActionResult ActualizarInscripcion(Inscripcion inscripcion)
         {
             try
             {
                 _inscripcionesService.ActualizarInscripcion(inscripcion);
-                TempData["Exito"] = "Inscripción actualizada.";
+
+                if (inscripcion.IdCatEstadoInscripcion == 2) // 2 = Aprobada
+                {
+                    var inscripcionBD = _inscripcionesService.ListarInscripciones()
+                        .FirstOrDefault(i => i.Codigo == inscripcion.Codigo);
+
+                    if (inscripcionBD == null)
+                        throw new Exception("No se encontró la inscripción aprobada.");
+
+                    var caballo = _equinosService.ListarCaballos()
+                        .FirstOrDefault(c => c.Codigo == inscripcionBD.CodigoCaballo);
+
+                    if (caballo == null)
+                        throw new Exception("No se encontró el caballo de la inscripción.");
+
+                    var usuarioActual = User.Identity?.Name ?? "usuario_desconocido";
+
+                    _facturacionService.GenerarFacturaPorInscripcion(
+                        caballo.CodigoPropietario,
+                        inscripcionBD.CodigoEvento,
+                        usuarioActual
+                    );
+                }
+
+                TempData["Exito"] = "Inscripción actualizada correctamente.";
             }
-            catch (Exception ex) { TempData["Error"] = $"Error: {ex.Message}"; }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error: {ex.Message}";
+            }
+
             return RedirectToAction("Index");
         }
 

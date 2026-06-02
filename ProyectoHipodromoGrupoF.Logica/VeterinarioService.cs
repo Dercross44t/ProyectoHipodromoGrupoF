@@ -18,19 +18,32 @@ namespace ProyectoHipodromoGrupoF.Logica
         public List<Veterinario> ListarVeterinarios() =>
             _veterinarioRepository.ListarVeterinarios();
 
+        public void InsertarVeterinario(Veterinario veterinario, string usuarioActual) =>
+            _veterinarioRepository.InsertarVeterinario(veterinario, usuarioActual);
+
         public void InsertarVeterinario(Veterinario veterinario) =>
-            _veterinarioRepository.InsertarVeterinario(veterinario);
+            _veterinarioRepository.InsertarVeterinario(veterinario, "sistema");
+
+        public void ActualizarVeterinario(Veterinario veterinario, string usuarioActual) =>
+            _veterinarioRepository.ActualizarVeterinario(veterinario, usuarioActual);
+
+        public void EliminarVeterinario(string codigo, string usuarioActual) =>
+            _veterinarioRepository.EliminarVeterinario(codigo, usuarioActual);
 
         public void ActualizarVeterinario(Veterinario veterinario) =>
-            _veterinarioRepository.ActualizarVeterinario(veterinario);
+            _veterinarioRepository.ActualizarVeterinario(veterinario, "sistema");
 
         public void EliminarVeterinario(string codigo) =>
-            _veterinarioRepository.EliminarVeterinario(codigo);
+            _veterinarioRepository.EliminarVeterinario(codigo, "sistema");
+
+        public string ObtenerCodigoVeterinarioPorUsuario(string usuarioActual) =>
+            _veterinarioRepository.ObtenerCodigoVeterinarioPorUsuario(usuarioActual);
 
         // ─── HISTORIAL VETERINARIO ───────────────────────────────────────────────
 
         public List<HistorialVeterinario> ListarHistorialVeterinario() =>
             _veterinarioRepository.ListarHistorialVeterinario();
+
 
         public List<HistorialVeterinario> ListarHistorialPorCaballo(string codigoCaballo) =>
             _veterinarioRepository.ListarHistorialPorCaballo(codigoCaballo);
@@ -38,22 +51,23 @@ namespace ProyectoHipodromoGrupoF.Logica
         public void InsertarHistorial(HistorialVeterinario historial, string usuarioActual) =>
             _veterinarioRepository.InsertarHistorial(historial, usuarioActual);
 
+        public void InsertarHistorial(HistorialVeterinario historial) =>
+            _veterinarioRepository.InsertarHistorial(historial, "sistema");
+
         public void ActualizarHistorial(HistorialVeterinario historial, string usuarioActual) =>
             _veterinarioRepository.ActualizarHistorial(historial, usuarioActual);
 
         public void EliminarHistorial(string codigo, string usuarioActual) =>
             _veterinarioRepository.EliminarHistorial(codigo, usuarioActual);
 
-        public string ObtenerCodigoVeterinarioPorUsuario(string usuarioActual)
-        {
-            return _veterinarioRepository.ObtenerCodigoVeterinarioPorUsuario(usuarioActual);
-        }
+        public void ActualizarHistorial(HistorialVeterinario historial) =>
+            _veterinarioRepository.ActualizarHistorial(historial, "sistema");
 
-        // ─── ALERTAS (2% rúbrica) ────────────────────────────────────────────────
+        public void EliminarHistorial(string codigo) =>
+            _veterinarioRepository.EliminarHistorial(codigo, "sistema");
 
-        /// <summary>
-        /// Retorna caballos con certificación vencida o que vence en los próximos 30 días.
-        /// </summary>
+        // ─── ALERTAS ─────────────────────────────────────────────────────────────
+
         public List<AlertaVeterinaria> ObtenerAlertasCertificacion() =>
             _veterinarioRepository.ObtenerAlertasCertificacion();
     }
